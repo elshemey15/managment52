@@ -6,9 +6,10 @@ import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { DashboardSidebar } from '@/components/layout/dashboard-sidebar';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Cloud, CheckCircle2, Download, Save, FileJson, FileSpreadsheet, FileText } from 'lucide-react';
+import { Cloud, CheckCircle2, Download, Save, FileJson, FileSpreadsheet, FileText, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import {
   Dialog,
@@ -32,6 +33,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const [isSyncing, setIsSyncing] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
+  const [isPasswordPromptOpen, setIsPasswordPromptOpen] = useState(false);
+  const [masterKeyInput, setMasterKeyInput] = useState('');
 
   useEffect(() => {
     if (!currentUser) {
@@ -48,8 +51,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const onExport = (format: 'json' | 'excel' | 'pdf') => {
+    if (format === 'json') {
+      setIsPasswordPromptOpen(true);
+      return;
+    }
     exportAllData(format);
     setIsExportOpen(false);
+  };
+
+  const handleJsonExportWithPassword = () => {
+    // الرمز الاحتياطي المتفق عليه في النظام
+    if (masterKeyInput === 'abdallah123456a') {
+      exportAllData('json');
+      setIsPasswordPromptOpen(false);
+      setIsExportOpen(false);
+      setMasterKeyInput('');
+      toast({ title: 'تم التحقق وتنزيل نسخة JSON بنجاح' });
+    } else {
+      toast({ title: 'الرمز الاحتياطي غير صحيح!', variant: 'destructive' });
+    }
   };
 
   if (!currentUser) return null;
@@ -127,13 +147,50 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                           <FileText className="h-5 w-5 text-red-600" />
                           <span className="font-bold text-slate-700">تصدير كـ PDF (طباعة)</span>
                         </Button>
-                        <Button variant="outline" className="justify-start gap-3 h-12" onClick={() => onExport('json')}>
-                          <FileJson className="h-5 w-5 text-[#336699]" />
-                          <span className="font-bold text-slate-700">تصدير كـ JSON (برمجي)</span>
+                        <Button variant="outline" className="justify-start gap-3 h-12 border-dashed" onClick={() => onExport('json')}>
+                          <div className="flex items-center gap-2">
+                            <FileJson className="h-5 w-5 text-[#336699]" />
+                            <Lock className="h-3 w-3 text-amber-500" />
+                          </div>
+                          <span className="font-bold text-slate-700">تصدير كـ JSON (تتطلب رمز الأمان)</span>
                         </Button>
                       </div>
                     </div>
                   </div>
+                </DialogContent>
+              </Dialog>
+
+              <Dialog open={isPasswordPromptOpen} onOpenChange={setIsPasswordPromptOpen}>
+                <DialogContent dir="rtl" className="text-right sm:max-w-[400px]">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2 justify-end">
+                      تأكيد الهوية الإدارية
+                      <Lock className="h-5 w-5 text-amber-500" />
+                    </DialogTitle>
+                    <DialogDescription>
+                      تصدير نسخة JSON يحتوي على كافة بيانات النظام البرمجية. يرجى إدخال الرمز الاحتياطي للمتابعة.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="py-4 space-y-4">
+                    <div className="space-y-2">
+                      <Label>الرمز الاحتياطي (Master Key)</Label>
+                      <Input 
+                        type="password" 
+                        value={masterKeyInput} 
+                        onChange={(e) => setMasterKeyInput(e.target.value)}
+                        placeholder="أدخل الرمز الاحتياطي"
+                        className="text-right h-12"
+                      />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      className="w-full bg-[#336699] font-bold h-12" 
+                      onClick={handleJsonExportWithPassword}
+                    >
+                      تأكيد وتحميل النسخة
+                    </Button>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
 
