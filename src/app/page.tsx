@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Package, Lock, User } from 'lucide-react';
+import { Package, Lock, User, Phone } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -136,8 +136,13 @@ export default function LoginPage() {
           </form>
         </Card>
 
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>© 2025 A-E Storage Ecosystem. جميع الحقوق محفوظة.</p>
+        <div className="mt-8 text-center space-y-2">
+          <p className="text-sm font-bold text-[#336699]">تم التطوير بواسطة: Abdallah Elshemey</p>
+          <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+            <Phone className="h-3 w-3" />
+            <span>01102346158</span>
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-4 opacity-50">© 2025 A-E Storage Ecosystem. جميع الحقوق محفوظة.</p>
         </div>
       </div>
     </div>
