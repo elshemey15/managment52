@@ -50,7 +50,7 @@ const WarehouseContext = createContext<WarehouseContextType | undefined>(undefin
 export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([
-    { id: '1', username: 'admin', role: 'Admin', password: '123' },
+    { id: '1', username: 'abdallah', role: 'Admin', password: 'abdallah12345a' },
     { id: '2', username: 'editor', role: 'Editor', password: '123' },
     { id: '3', username: 'logger', role: 'Logger', password: '123' },
   ]);
@@ -116,6 +116,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const resetPasswordWithMasterKey = (username: string, masterKey: string, newPassword: string) => {
+    // الرمز الإداري المطلوب كما طلب المستخدم
     if (masterKey !== 'abdallah1245a') return false;
     const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
     if (userIndex === -1) return false;
