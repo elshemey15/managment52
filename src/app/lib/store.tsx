@@ -121,10 +121,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const emergencyLogin = (k: string) => {
     if (k === MASTER_KEY) {
-      // البحث عن أول مدير موجود في النظام
       let admin = users.find(u => u.role === 'Admin');
-      
-      // إذا كان النظام فارغاً، ننشئ جلسة دخول افتراضية بلقب المدير
       if (!admin) {
         admin = {
           id: 'root-admin',
@@ -132,7 +129,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           role: 'Admin'
         };
       }
-      
       setCurrentUser(admin);
       localStorage.setItem('ae_current_user', JSON.stringify(admin));
       return true;
@@ -160,10 +156,24 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const addUnit = (u: any) => addDoc(collection(db, 'units'), u);
   const deleteUnit = (id: string) => deleteDoc(doc(db, 'units', id));
 
-  const addItem = (i: any) => {
+  const addItem = async (i: any) => {
     const maxCode = items.reduce((max, x) => Math.max(max, parseInt(x.code) || 0), 0);
-    addDoc(collection(db, 'items'), { ...i, code: (maxCode + 1).toString() });
+    const itemData = { ...i, code: (maxCode + 1).toString() };
+    const docRef = await addDoc(collection(db, 'items'), itemData);
+    
+    if (itemData.currentStock > 0) {
+      await addDoc(collection(db, 'movements'), {
+        itemId: docRef.id,
+        type: 'IN',
+        quantity: itemData.currentStock,
+        priceAtTime: itemData.purchasePrice,
+        userId: currentUser?.id || 'system',
+        timestamp: serverTimestamp(),
+        note: 'رصيد أول المدة عند إنشاء الصنف'
+      });
+    }
   };
+
   const updateItem = (id: string, d: any) => setDoc(doc(db, 'items', id), d, { merge: true });
   const deleteItem = (id: string) => deleteDoc(doc(db, 'items', id));
 
@@ -189,7 +199,8 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         quantity: u.qty,
         priceAtTime: inv.items.find((i: any) => i.itemId === u.itemId)?.price || 0,
         userId: currentUser?.id || 'system',
-        timestamp: serverTimestamp()
+        timestamp: serverTimestamp(),
+        note: `توريد فاتورة من المورد: ${inv.supplierName}`
       });
     });
 

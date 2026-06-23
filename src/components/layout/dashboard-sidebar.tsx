@@ -14,7 +14,8 @@ import {
   Wallet,
   Layers,
   Scale,
-  ShoppingCart
+  ShoppingCart,
+  History
 } from 'lucide-react';
 import {
   Sidebar,
@@ -41,6 +42,7 @@ export function DashboardSidebar() {
     { name: 'وحدات القياس', icon: Scale, href: '/dashboard/units' },
     { name: 'المستودع (المخزن)', icon: Package, href: '/dashboard/inventory' },
     { name: 'المشتريات (فواتير)', icon: ShoppingCart, href: '/dashboard/purchases' },
+    { name: 'سجل الحركات', icon: History, href: '/dashboard/movements' },
     { name: 'الموردين والديون', icon: Users, href: '/dashboard/accounts' },
     { name: 'المصاريف العامة', icon: Wallet, href: '/dashboard/expenses' },
   ];
