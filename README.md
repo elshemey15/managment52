@@ -1,5 +1,11 @@
-# Firebase Studio
+# نظام A-E Storage Ecosystem
 
-This is a NextJS starter in Firebase Studio.
+هذا النظام جاهز للنشر السحابي.
 
-To get started, take a look at src/app/page.tsx.
+## خطوات النشر والحصول على الرابط:
+1. قم بفتح مشروعك في [Firebase Console](https://console.firebase.google.com/).
+2. قم بتفعيل خدمة **Firestore Database** و **App Hosting**.
+3. في واجهة المحرر الحالية، اضغط على زر **Deploy** الموجود في شريط الأدوات.
+4. بعد انتهاء الرفع، سيعطيك Firebase رابطاً ينتهي بـ `.web.app` وهو الرابط الدائم لموقعك.
+
+**ملاحظة:** البيانات محفوظة سحابياً وتعمل تلقائياً بمجرد النشر.
