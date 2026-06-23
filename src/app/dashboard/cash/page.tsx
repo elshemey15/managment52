@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useWarehouse } from '@/app/lib/store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,9 @@ import {
   Search, 
   User, 
   Phone,
-  Calendar
+  Calendar,
+  Calculator,
+  UserCheck
 } from 'lucide-react';
 import {
   Table,
@@ -53,11 +55,21 @@ export default function CashTransactionsPage() {
     e.currentTarget.reset();
   };
 
-  const filteredTransactions = cashTransactions.filter(t => 
-    t.personName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    t.phoneNumber.includes(searchTerm) ||
-    t.note?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredTransactions = useMemo(() => {
+    return cashTransactions.filter(t => 
+      t.personName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t.phoneNumber.includes(searchTerm) ||
+      (t.note && t.note.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
+  }, [cashTransactions, searchTerm]);
+
+  // حسابات الشخص المحدد في البحث
+  const personStats = useMemo(() => {
+    if (!searchTerm) return null;
+    const sent = filteredTransactions.filter(t => t.type === 'SEND').reduce((acc, t) => acc + t.amount, 0);
+    const received = filteredTransactions.filter(t => t.type === 'RECEIVE').reduce((acc, t) => acc + t.amount, 0);
+    return { sent, received, count: filteredTransactions.length };
+  }, [filteredTransactions, searchTerm]);
 
   const totalSent = cashTransactions.filter(t => t.type === 'SEND').reduce((acc, t) => acc + t.amount, 0);
   const totalReceived = cashTransactions.filter(t => t.type === 'RECEIVE').reduce((acc, t) => acc + t.amount, 0);
@@ -67,7 +79,7 @@ export default function CashTransactionsPage() {
       <div className="flex justify-between items-end flex-row-reverse">
         <div>
           <h1 className="text-3xl font-bold text-[#336699]">إدارة الحوالات والكاش</h1>
-          <p className="text-muted-foreground font-medium">توثيق المبالغ المرسلة والمستلمة (فودافون كاش، تحويلات، إلخ)</p>
+          <p className="text-muted-foreground font-medium">توثيق المبالغ المرسلة والمستلمة وإدارة حسابات الأشخاص</p>
         </div>
         <div className="flex gap-4">
           <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100 text-left">
@@ -80,6 +92,42 @@ export default function CashTransactionsPage() {
           </div>
         </div>
       </div>
+
+      {/* قسم تلخيص البحث عن شخص */}
+      {searchTerm && personStats && (
+        <Card className="border-none shadow-md bg-[#336699] text-white overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row-reverse items-center justify-between gap-6">
+              <div className="flex items-center gap-4 flex-row-reverse">
+                <div className="bg-white/20 p-3 rounded-full">
+                  <UserCheck className="h-8 w-8 text-white" />
+                </div>
+                <div className="text-right">
+                  <p className="text-white/70 text-sm font-bold">ملخص الحساب لـ:</p>
+                  <h2 className="text-2xl font-black italic">"{searchTerm}"</h2>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-8 w-full md:w-auto">
+                <div className="bg-white/10 p-4 rounded-xl text-center border border-white/10">
+                  <p className="text-xs font-bold text-white/70 mb-1">إجمالي ما استلمه</p>
+                  <p className="text-xl font-black text-emerald-300">+{personStats.received.toLocaleString()} $</p>
+                </div>
+                <div className="bg-white/10 p-4 rounded-xl text-center border border-white/10">
+                  <p className="text-xs font-bold text-white/70 mb-1">إجمالي ما أرسله</p>
+                  <p className="text-xl font-black text-amber-300">-{personStats.sent.toLocaleString()} $</p>
+                </div>
+                <div className="bg-white/10 p-4 rounded-xl text-center border border-white/10 hidden md:block">
+                  <p className="text-xs font-bold text-white/70 mb-1">صافي الحساب</p>
+                  <p className={`text-xl font-black ${personStats.received - personStats.sent >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>
+                    {(personStats.received - personStats.sent).toLocaleString()} $
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <Card className="border-none shadow-sm h-fit">
@@ -98,8 +146,8 @@ export default function CashTransactionsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent dir="rtl">
-                    <SelectItem value="RECEIVE">استلام مبلع (مستلم)</SelectItem>
-                    <SelectItem value="SEND">إرسال مبلغ (مرسل)</SelectItem>
+                    <SelectItem value="RECEIVE">استلام مبلع (مستلم +)</SelectItem>
+                    <SelectItem value="SEND">إرسال مبلغ (مرسل -)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -122,7 +170,7 @@ export default function CashTransactionsPage() {
 
               <div className="space-y-2">
                 <Label>المبلغ</Label>
-                <Input name="amount" type="number" step="0.01" required placeholder="0.00" className="text-right h-11" />
+                <Input name="amount" type="number" step="0.01" required placeholder="0.00" className="text-right h-11 font-black" />
               </div>
 
               <div className="space-y-2">
@@ -136,7 +184,7 @@ export default function CashTransactionsPage() {
               </div>
 
               <Button type="submit" className="w-full bg-[#336699] font-bold h-12" disabled={!canEdit()}>
-                <Plus className="h-4 w-4 ml-2" /> حفظ المعاملة
+                <Plus className="h-4 w-4 ml-2" /> حفظ المعاملة السحابية
               </Button>
             </form>
           </CardContent>
@@ -144,10 +192,10 @@ export default function CashTransactionsPage() {
 
         <div className="lg:col-span-2 space-y-4">
           <div className="relative">
-            <Search className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute right-3 top-3.5 h-5 w-5 text-[#336699]" />
             <Input 
-              placeholder="ابحث بالاسم، الرقم، أو الملاحظة..." 
-              className="pr-10 text-right h-12 bg-white" 
+              placeholder="ابحث باسم الشخص لحساب إجمالي تعاملاته (مرسل/مستلم)..." 
+              className="pr-10 text-right h-14 bg-white shadow-sm border-2 border-[#336699]/10 focus:border-[#336699] transition-all text-lg font-bold" 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -170,7 +218,7 @@ export default function CashTransactionsPage() {
                   {filteredTransactions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={isAdmin() ? 6 : 5} className="text-center py-20 text-muted-foreground italic font-medium">
-                        لا توجد معاملات مسجلة حالياً
+                        {searchTerm ? 'لا توجد نتائج مطابقة لبحثك' : 'لا توجد معاملات مسجلة حالياً'}
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -178,7 +226,7 @@ export default function CashTransactionsPage() {
                       <TableRow key={trans.id} className="hover:bg-slate-50/50 transition-colors">
                         <TableCell className="text-right">
                           <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-700">
+                            <span className="text-sm font-bold text-slate-700">
                               {new Date(trans.date).toLocaleDateString('ar-EG')}
                             </span>
                             <span className="text-[9px] text-muted-foreground flex items-center gap-1 justify-end">
@@ -190,11 +238,11 @@ export default function CashTransactionsPage() {
                         <TableCell className="text-right">
                           {trans.type === 'RECEIVE' ? (
                             <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-none font-bold gap-1">
-                              <ArrowDownLeft className="h-3 w-3" /> مستلم
+                              <ArrowDownLeft className="h-3 w-3" /> مستلم (+)
                             </Badge>
                           ) : (
                             <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200 border-none font-bold gap-1">
-                              <ArrowUpRight className="h-3 w-3" /> مرسل
+                              <ArrowUpRight className="h-3 w-3" /> مرسل (-)
                             </Badge>
                           )}
                         </TableCell>
