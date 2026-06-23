@@ -73,6 +73,7 @@ export interface GeneralInvoice {
   id: string;
   date: string;
   day: string;
+  invoiceCount?: number;
   salePrice?: number;
   expenses?: number;
   note?: string;
