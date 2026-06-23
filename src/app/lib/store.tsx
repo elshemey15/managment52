@@ -1,8 +1,8 @@
 
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Category, Item, Movement, DebtAccount, Expense, Repayment, UserRole } from './types';
+import React, { createContext, useContext, useState } from 'react';
+import { User, Category, Item, Movement, DebtAccount, Expense, Repayment } from './types';
 import { toast } from '@/hooks/use-toast';
 
 interface WarehouseContextType {
@@ -39,19 +39,19 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   ]);
 
   const [categories, setCategories] = useState<Category[]>([
-    { id: 'c1', name: 'Electronics' },
-    { id: 'c2', name: 'Furniture' },
+    { id: 'c1', name: 'إلكترونيات' },
+    { id: 'c2', name: 'أثاث مكتبي' },
   ]);
 
   const [items, setItems] = useState<Item[]>([
-    { id: 'i1', code: 'E001', name: 'Laptop Pro', categoryId: 'c1', unit: 'pcs', purchasePrice: 800, salePrice: 1200, currentStock: 10 },
-    { id: 'i2', code: 'F001', name: 'Desk Chair', categoryId: 'c2', unit: 'pcs', purchasePrice: 50, salePrice: 95, currentStock: 25 },
+    { id: 'i1', code: 'E001', name: 'لابتوب احترافي', categoryId: 'c1', unit: 'قطعة', purchasePrice: 800, salePrice: 1200, currentStock: 10 },
+    { id: 'i2', code: 'F001', name: 'كرسي مكتب', categoryId: 'c2', unit: 'قطعة', purchasePrice: 50, salePrice: 95, currentStock: 25 },
   ]);
 
   const [movements, setMovements] = useState<Movement[]>([]);
   const [debtAccounts, setDebtAccounts] = useState<DebtAccount[]>([
-    { id: 'd1', name: 'Global Suppliers Ltd', type: 'SUPPLIER', balance: 0 },
-    { id: 'd2', name: 'Acme Corp', type: 'CUSTOMER', balance: 0 },
+    { id: 'd1', name: 'المورد العالمي المحدود', type: 'SUPPLIER', balance: 0 },
+    { id: 'd2', name: 'شركة البركة التجارية', type: 'CUSTOMER', balance: 0 },
   ]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [repayments, setRepayments] = useState<Repayment[]>([]);
@@ -71,24 +71,28 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const canEdit = () => currentUser?.role === 'Admin' || currentUser?.role === 'Editor';
 
   const addItem = (item: Omit<Item, 'id'>) => {
-    if (!canEdit()) return toast({ title: 'Access Denied', variant: 'destructive' });
+    if (!canEdit()) return toast({ title: 'عذراً، لا تملك الصلاحية', variant: 'destructive' });
     const newItem = { ...item, id: Math.random().toString(36).substr(2, 9) };
     setItems(prev => [...prev, newItem]);
+    toast({ title: 'تمت إضافة المادة بنجاح' });
   };
 
   const updateItem = (id: string, itemData: Partial<Item>) => {
-    if (!canEdit()) return toast({ title: 'Access Denied', variant: 'destructive' });
+    if (!canEdit()) return toast({ title: 'عذراً، لا تملك الصلاحية', variant: 'destructive' });
     setItems(prev => prev.map(i => i.id === id ? { ...i, ...itemData } : i));
+    toast({ title: 'تم تحديث بيانات المادة' });
   };
 
   const deleteItem = (id: string) => {
-    if (!isAdmin()) return toast({ title: 'Only Admins can delete', variant: 'destructive' });
+    if (!isAdmin()) return toast({ title: 'فقط المدير يمكنه الحذف', variant: 'destructive' });
     setItems(prev => prev.filter(i => i.id !== id));
+    toast({ title: 'تم حذف المادة' });
   };
 
   const addCategory = (cat: Omit<Category, 'id'>) => {
     if (!canEdit()) return;
     setCategories(prev => [...prev, { ...cat, id: Math.random().toString(36).substr(2, 9) }]);
+    toast({ title: 'تمت إضافة التصنيف' });
   };
 
   const addMovement = (move: Omit<Movement, 'id' | 'timestamp' | 'userId'>) => {
@@ -116,8 +120,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       const totalValue = movement.quantity * movement.priceAtTime;
       setDebtAccounts(prev => prev.map(acc => {
         if (acc.id === movement.debtAccountId) {
-          // If IN (purchase from supplier), our debt increases (+)
-          // If OUT (sale to customer), their debt to us increases (-)
           const balanceChange = movement.type === 'IN' ? totalValue : -totalValue;
           return { ...acc, balance: acc.balance + balanceChange };
         }
@@ -129,6 +131,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const addDebtAccount = (acc: Omit<DebtAccount, 'id' | 'balance'>) => {
     if (!canEdit()) return;
     setDebtAccounts(prev => [...prev, { ...acc, id: Math.random().toString(36).substr(2, 9), balance: 0 }]);
+    toast({ title: 'تم إنشاء الحساب المالي' });
   };
 
   const addRepayment = (rep: Omit<Repayment, 'id' | 'timestamp' | 'userId'>) => {
@@ -143,13 +146,12 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     setDebtAccounts(prev => prev.map(acc => {
       if (acc.id === repayment.debtAccountId) {
-        // PAYMENT decreases our debt to supplier (-)
-        // RECEIPT decreases customer's debt to us (+) (since customer balance is negative)
         const amountChange = repayment.type === 'PAYMENT' ? -repayment.amount : repayment.amount;
         return { ...acc, balance: acc.balance + amountChange };
       }
       return acc;
     }));
+    toast({ title: 'تم تسجيل الحركة المالية' });
   };
 
   const addExpense = (exp: Omit<Expense, 'id' | 'timestamp' | 'userId'>) => {
@@ -161,6 +163,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       userId: currentUser.id,
     };
     setExpenses(prev => [expense, ...prev]);
+    toast({ title: 'تم تسجيل المصروف بنجاح' });
   };
 
   return (

@@ -32,16 +32,17 @@ export default function MovementsPage() {
   const [type, setType] = useState<'IN' | 'OUT'>('IN');
   const [quantity, setQuantity] = useState(1);
   const [debtAccountId, setDebtAccountId] = useState('');
+  const [historySearch, setHistorySearch] = useState('');
 
   const handleRecord = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedItemId) return toast({ title: 'Please select an item', variant: 'destructive' });
+    if (!selectedItemId) return toast({ title: 'يرجى اختيار مادة', variant: 'destructive' });
     
     const item = items.find(i => i.id === selectedItemId);
     if (!item) return;
 
     if (type === 'OUT' && item.currentStock < quantity) {
-      return toast({ title: 'Insufficient stock!', variant: 'destructive' });
+      return toast({ title: 'المخزون غير كافٍ!', variant: 'destructive' });
     }
 
     addMovement({
@@ -49,64 +50,70 @@ export default function MovementsPage() {
       type,
       quantity,
       priceAtTime: type === 'IN' ? item.purchasePrice : item.salePrice,
-      debtAccountId: debtAccountId === 'none' ? undefined : debtAccountId
+      debtAccountId: debtAccountId === 'none' || !debtAccountId ? undefined : debtAccountId
     });
 
-    toast({ title: 'Movement recorded successfully' });
+    toast({ title: 'تم تسجيل الحركة بنجاح' });
     setQuantity(1);
     setSelectedItemId('');
     setDebtAccountId('');
   };
 
+  const filteredMovements = movements.filter(m => {
+    const item = items.find(i => i.id === m.itemId);
+    return item?.name.toLowerCase().includes(historySearch.toLowerCase()) || 
+           item?.code.toLowerCase().includes(historySearch.toLowerCase());
+  });
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-right">
       <div>
-        <h1 className="text-3xl font-bold text-[#336699]">Stock Movements</h1>
-        <p className="text-muted-foreground">Record item arrivals and sales</p>
+        <h1 className="text-3xl font-bold text-[#336699]">حركات المخزن</h1>
+        <p className="text-muted-foreground font-medium">تسجيل عمليات التوريد والصرف</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="border-none shadow-sm">
+        <Card className="border-none shadow-sm h-fit">
           <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+            <CardTitle className="text-lg flex items-center gap-2 flex-row-reverse">
               <ArrowLeftRight className="h-5 w-5 text-accent" />
-              New Transaction
+              معاملة جديدة
             </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleRecord} className="space-y-4">
               <div className="space-y-2">
-                <Label>Movement Type</Label>
+                <Label>نوع الحركة</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <Button 
                     type="button" 
                     variant={type === 'IN' ? 'default' : 'outline'}
-                    className={`h-12 ${type === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                    className={`h-12 font-bold ${type === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-none' : ''}`}
                     onClick={() => setType('IN')}
                   >
-                    <ArrowDownLeft className="mr-2 h-4 w-4" /> Stock In
+                    <ArrowDownLeft className="ml-2 h-4 w-4" /> توريد (داخل)
                   </Button>
                   <Button 
                     type="button" 
                     variant={type === 'OUT' ? 'default' : 'outline'}
-                    className={`h-12 ${type === 'OUT' ? 'bg-amber-600 hover:bg-amber-700' : ''}`}
+                    className={`h-12 font-bold ${type === 'OUT' ? 'bg-amber-600 hover:bg-amber-700 text-white border-none' : ''}`}
                     onClick={() => setType('OUT')}
                   >
-                    <ArrowUpRight className="mr-2 h-4 w-4" /> Stock Out
+                    <ArrowUpRight className="ml-2 h-4 w-4" /> صرف (خارج)
                   </Button>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="item">Select Item</Label>
+                <Label htmlFor="item">اختر المادة</Label>
                 <Select value={selectedItemId} onValueChange={setSelectedItemId}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Search Item..." />
+                  <SelectTrigger className="h-11 text-right">
+                    <SelectValue placeholder="ابحث عن مادة..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent dir="rtl">
                     {items.map(item => (
                       <SelectItem key={item.id} value={item.id}>
-                        {item.name} ({item.code}) - Stock: {item.currentStock}
+                        {item.name} ({item.code}) - المتوفر: {item.currentStock}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -114,100 +121,107 @@ export default function MovementsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="qty">Quantity</Label>
+                <Label htmlFor="qty">الكمية</Label>
                 <Input 
                   id="qty" 
                   type="number" 
                   min="1" 
-                  className="h-11"
+                  className="h-11 text-right"
                   value={quantity}
                   onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="debt">Link to Account (Credit/Debt)</Label>
+                <Label htmlFor="debt">ربط بحساب (آجل / دين)</Label>
                 <Select value={debtAccountId} onValueChange={setDebtAccountId}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Select Account (Optional)" />
+                  <SelectTrigger className="h-11 text-right">
+                    <SelectValue placeholder="اختر حساباً (اختياري)" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None (Cash Transaction)</SelectItem>
+                  <SelectContent dir="rtl">
+                    <SelectItem value="none">بدون ربط (نقدي)</SelectItem>
                     {debtAccounts.filter(a => a.type === (type === 'IN' ? 'SUPPLIER' : 'CUSTOMER')).map(acc => (
                       <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[10px] text-muted-foreground italic">
-                  *IN adds to supplier debt. OUT adds to customer credit.
+                <p className="text-[10px] text-muted-foreground italic font-bold">
+                  * التوريد يزيد دين المورد. الصرف يزيد مستحقاتنا من العميل.
                 </p>
               </div>
 
-              <Button type="submit" className="w-full h-11 bg-[#336699] mt-4">
-                Confirm Movement
+              <Button type="submit" className="w-full h-11 bg-[#336699] mt-4 font-bold text-lg">
+                تأكيد الحركة
               </Button>
             </form>
           </CardContent>
         </Card>
 
         <Card className="lg:col-span-2 border-none shadow-sm">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Recent History</CardTitle>
+          <CardHeader className="flex flex-row-reverse items-center justify-between">
+            <CardTitle className="text-lg">سجل الحركات</CardTitle>
             <div className="relative w-64">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Filter history..." className="pl-9 h-9" />
+              <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="تصفية السجل..." 
+                className="pr-9 h-9 text-right" 
+                value={historySearch}
+                onChange={(e) => setHistorySearch(e.target.value)}
+              />
             </div>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Time & User</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-center">Qty</TableHead>
-                  <TableHead className="text-right">Price</TableHead>
+                  <TableHead className="text-right">الوقت والمستخدم</TableHead>
+                  <TableHead className="text-right">النوع</TableHead>
+                  <TableHead className="text-right">المادة</TableHead>
+                  <TableHead className="text-center">الكمية</TableHead>
+                  <TableHead className="text-left">إجمالي القيمة</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {movements.length === 0 ? (
+                {filteredMovements.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">
-                      No records found
+                      لا توجد سجلات مطابقة
                     </TableCell>
                   </TableRow>
                 ) : (
-                  movements.map((move) => {
+                  filteredMovements.map((move) => {
                     const item = items.find(i => i.id === move.itemId);
                     const user = users.find(u => u.id === move.userId);
                     return (
                       <TableRow key={move.id}>
-                        <TableCell>
+                        <TableCell className="text-right">
                           <div className="flex flex-col">
-                            <span className="text-xs font-semibold flex items-center gap-1">
-                              <Clock className="h-3 w-3" /> {new Date(move.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                            <span className="text-xs font-bold flex items-center gap-1 justify-end">
+                              {new Date(move.timestamp).toLocaleString('ar-EG', { dateStyle: 'short', timeStyle: 'short' })}
+                              <Clock className="h-3 w-3" />
                             </span>
-                            <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                              <User className="h-3 w-3" /> {user?.username}
+                            <span className="text-[10px] text-muted-foreground flex items-center gap-1 justify-end">
+                              {user?.username}
+                              <User className="h-3 w-3" />
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="text-right">
                           {move.type === 'IN' ? (
-                            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none">IN (وارد)</Badge>
+                            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none font-bold">توريد (وارد)</Badge>
                           ) : (
-                            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none">OUT (صادر)</Badge>
+                            <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-none font-bold">صرف (صادر)</Badge>
                           )}
                         </TableCell>
-                        <TableCell>
-                          <div className="font-medium text-sm">{item?.name}</div>
+                        <TableCell className="text-right">
+                          <div className="font-bold text-sm">{item?.name}</div>
                           <div className="text-[10px] text-muted-foreground uppercase">{item?.code}</div>
                         </TableCell>
-                        <TableCell className="text-center font-bold">
+                        <TableCell className="text-center font-black">
                           {move.quantity}
                         </TableCell>
-                        <TableCell className="text-right font-mono text-sm">
-                          ${(move.priceAtTime * move.quantity).toFixed(2)}
+                        <TableCell className="text-left font-mono font-bold text-[#336699]">
+                          {(move.priceAtTime * move.quantity).toLocaleString()} $
                         </TableCell>
                       </TableRow>
                     );

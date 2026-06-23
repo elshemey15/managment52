@@ -21,15 +21,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full bg-background overflow-hidden">
+      <div className="flex h-screen w-full bg-background overflow-hidden" dir="rtl">
         <DashboardSidebar />
         <SidebarInset className="flex flex-col flex-1 overflow-auto">
-          <header className="h-16 border-b bg-card flex items-center px-8 shrink-0">
-            <div className="flex-1">
-              <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Warehouse Management System</h2>
+          <header className="h-16 border-b bg-card flex items-center px-8 shrink-0 justify-between">
+            <div className="flex items-center gap-4">
+              <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-wider">نظام إدارة المستودعات</h2>
             </div>
             <div className="flex items-center gap-4">
-              <span className="text-xs bg-accent/20 text-accent font-bold px-2 py-1 rounded">V 1.0.0</span>
+              <span className="text-xs bg-accent/20 text-accent font-black px-3 py-1 rounded-full uppercase">الإصدار 1.0.0</span>
             </div>
           </header>
           <main className="p-8 pb-12">

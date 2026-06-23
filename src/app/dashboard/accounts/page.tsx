@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Users, Plus, CreditCard, Receipt, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Receipt, TrendingUp, TrendingDown, Phone } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -66,49 +66,49 @@ export default function AccountsPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 text-right">
+      <div className="flex justify-between items-center flex-row-reverse">
         <div>
-          <h1 className="text-3xl font-bold text-[#336699]">Debt Accounts</h1>
-          <p className="text-muted-foreground">Manage suppliers, customers, and credit balance</p>
+          <h1 className="text-3xl font-bold text-[#336699]">حسابات الموردين والعملاء</h1>
+          <p className="text-muted-foreground font-medium">إدارة الديون، السلف، والمستحقات المالية</p>
         </div>
         <div className="flex gap-2">
           {canEdit() && (
             <>
               <Dialog open={isRepayDialogOpen} onOpenChange={setIsRepayDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="border-[#336699] text-[#336699] hover:bg-[#336699] hover:text-white">
-                    <Receipt className="h-4 w-4 mr-2" /> Record Repayment
+                  <Button variant="outline" className="border-[#336699] text-[#336699] hover:bg-[#336699] hover:text-white font-bold">
+                    <Receipt className="h-4 w-4 ml-2" /> تسجيل سداد / دفعة
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent dir="rtl">
                   <DialogHeader>
-                    <DialogTitle>Settle Debt / Repayment</DialogTitle>
+                    <DialogTitle className="text-right">تسوية دين / استلام مبلغ</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={handleRepayment} className="space-y-4 py-4">
+                  <form onSubmit={handleRepayment} className="space-y-4 py-4 text-right">
                     <div className="space-y-2">
-                      <Label>Select Account</Label>
+                      <Label>اختر الحساب</Label>
                       <Select name="accountId" required>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Account" />
+                        <SelectTrigger className="text-right">
+                          <SelectValue placeholder="اختر الحساب المستهدف" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent dir="rtl">
                           {debtAccounts.map(a => (
-                            <SelectItem key={a.id} value={a.id}>{a.name} ({a.type})</SelectItem>
+                            <SelectItem key={a.id} value={a.id}>{a.name} ({a.type === 'SUPPLIER' ? 'مورد' : 'عميل'})</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Amount Paid/Received</Label>
-                      <Input name="amount" type="number" step="0.01" required placeholder="0.00" />
+                      <Label>المبلغ المدفوع / المستلم</Label>
+                      <Input name="amount" type="number" step="0.01" required placeholder="0.00" className="text-right" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Note / Receipt Reference</Label>
-                      <Input name="note" placeholder="Optional reference" />
+                      <Label>ملاحظات / رقم الإيصال</Label>
+                      <Input name="note" placeholder="ملاحظة اختيارية" className="text-right" />
                     </div>
                     <DialogFooter>
-                      <Button type="submit" className="w-full bg-[#336699]">Save Transaction</Button>
+                      <Button type="submit" className="w-full bg-[#336699] font-bold">حفظ المعاملة المالية</Button>
                     </DialogFooter>
                   </form>
                 </DialogContent>
@@ -116,37 +116,37 @@ export default function AccountsPage() {
 
               <Dialog open={isAccDialogOpen} onOpenChange={setIsAccDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#336699] hover:bg-[#2a5580]">
-                    <Plus className="h-4 w-4 mr-2" /> New Account
+                  <Button className="bg-[#336699] hover:bg-[#2a5580] font-bold">
+                    <Plus className="h-4 w-4 ml-2" /> حساب جديد
                   </Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogContent dir="rtl">
                   <DialogHeader>
-                    <DialogTitle>Add New Debt Account</DialogTitle>
+                    <DialogTitle className="text-right">إضافة حساب مالي جديد</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={handleCreateAccount} className="space-y-4 py-4">
+                  <form onSubmit={handleCreateAccount} className="space-y-4 py-4 text-right">
                     <div className="space-y-2">
-                      <Label>Account Name</Label>
-                      <Input name="name" required placeholder="Company or Individual Name" />
+                      <Label>اسم الحساب</Label>
+                      <Input name="name" required placeholder="اسم الشركة أو الشخص" className="text-right" />
                     </div>
                     <div className="space-y-2">
-                      <Label>Account Type</Label>
+                      <Label>نوع الحساب</Label>
                       <Select name="type" defaultValue="SUPPLIER">
-                        <SelectTrigger>
+                        <SelectTrigger className="text-right">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="SUPPLIER">Supplier (We pay them)</SelectItem>
-                          <SelectItem value="CUSTOMER">Customer (They pay us)</SelectItem>
+                        <SelectContent dir="rtl">
+                          <SelectItem value="SUPPLIER">مورد (نحن ندفع له)</SelectItem>
+                          <SelectItem value="CUSTOMER">عميل (هو يدفع لنا)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>Phone / Contact</Label>
-                      <Input name="phone" placeholder="Contact details" />
+                      <Label>رقم الهاتف</Label>
+                      <Input name="phone" placeholder="بيانات الاتصال" className="text-right" />
                     </div>
                     <DialogFooter>
-                      <Button type="submit" className="w-full bg-[#336699]">Create Account</Button>
+                      <Button type="submit" className="w-full bg-[#336699] font-bold">إنشاء الحساب</Button>
                     </DialogFooter>
                   </form>
                 </DialogContent>
@@ -156,11 +156,11 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="suppliers">
-        <TabsList className="bg-white/50 border mb-4">
-          <TabsTrigger value="suppliers" className="px-8">Suppliers</TabsTrigger>
-          <TabsTrigger value="customers" className="px-8">Customers</TabsTrigger>
-          <TabsTrigger value="history" className="px-8">Repayment History</TabsTrigger>
+      <Tabs defaultValue="suppliers" className="w-full">
+        <TabsList className="bg-white/50 border mb-4 w-full justify-start p-1 h-12">
+          <TabsTrigger value="suppliers" className="flex-1 font-bold">الموردين</TabsTrigger>
+          <TabsTrigger value="customers" className="flex-1 font-bold">العملاء</TabsTrigger>
+          <TabsTrigger value="history" className="flex-1 font-bold">سجل السدادات</TabsTrigger>
         </TabsList>
 
         <TabsContent value="suppliers">
@@ -169,25 +169,28 @@ export default function AccountsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead>Supplier Name</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead className="text-right">Current Debt</TableHead>
-                    <TableHead className="text-right">Status</TableHead>
+                    <TableHead className="text-right">اسم المورد</TableHead>
+                    <TableHead className="text-right">الهاتف</TableHead>
+                    <TableHead className="text-left">إجمالي الدين لنا عليه</TableHead>
+                    <TableHead className="text-center">الحالة</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {debtAccounts.filter(a => a.type === 'SUPPLIER').map(acc => (
                     <TableRow key={acc.id}>
-                      <TableCell className="font-bold">{acc.name}</TableCell>
-                      <TableCell>{acc.phone || '-'}</TableCell>
-                      <TableCell className="text-right font-mono text-lg font-bold text-red-600">
-                        ${acc.balance.toLocaleString()}
+                      <TableCell className="font-bold text-right">{acc.name}</TableCell>
+                      <TableCell className="text-right flex items-center gap-2 justify-end">
+                        {acc.phone || '-'}
+                        <Phone className="h-3 w-3 text-muted-foreground" />
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-left font-mono text-lg font-black text-red-600">
+                        {acc.balance.toLocaleString()} $
+                      </TableCell>
+                      <TableCell className="text-center">
                         {acc.balance > 0 ? (
-                          <span className="text-xs font-semibold px-2 py-1 rounded bg-red-100 text-red-700">Payment Due</span>
+                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-red-100 text-red-700">مستحق الدفع</span>
                         ) : (
-                          <span className="text-xs font-semibold px-2 py-1 rounded bg-emerald-100 text-emerald-700">Settled</span>
+                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">مسدد بالكامل</span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -204,25 +207,28 @@ export default function AccountsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead>Customer Name</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead className="text-right">Credit Balance</TableHead>
-                    <TableHead className="text-right">Status</TableHead>
+                    <TableHead className="text-right">اسم العميل</TableHead>
+                    <TableHead className="text-right">الهاتف</TableHead>
+                    <TableHead className="text-left">رصيد المستحقات</TableHead>
+                    <TableHead className="text-center">الحالة</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {debtAccounts.filter(a => a.type === 'CUSTOMER').map(acc => (
                     <TableRow key={acc.id}>
-                      <TableCell className="font-bold">{acc.name}</TableCell>
-                      <TableCell>{acc.phone || '-'}</TableCell>
-                      <TableCell className="text-right font-mono text-lg font-bold text-blue-600">
-                        ${Math.abs(acc.balance).toLocaleString()}
+                      <TableCell className="font-bold text-right">{acc.name}</TableCell>
+                      <TableCell className="text-right flex items-center gap-2 justify-end">
+                        {acc.phone || '-'}
+                        <Phone className="h-3 w-3 text-muted-foreground" />
                       </TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-left font-mono text-lg font-black text-blue-600">
+                        {Math.abs(acc.balance).toLocaleString()} $
+                      </TableCell>
+                      <TableCell className="text-center">
                         {acc.balance < 0 ? (
-                          <span className="text-xs font-semibold px-2 py-1 rounded bg-blue-100 text-blue-700">Active Receivable</span>
+                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-700">ذمة نشطة</span>
                         ) : (
-                          <span className="text-xs font-semibold px-2 py-1 rounded bg-emerald-100 text-emerald-700">Settled</span>
+                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">خالص</span>
                         )}
                       </TableCell>
                     </TableRow>
@@ -239,34 +245,34 @@ export default function AccountsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead>Date</TableHead>
-                    <TableHead>Account</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                    <TableHead>Note</TableHead>
+                    <TableHead className="text-right">التاريخ</TableHead>
+                    <TableHead className="text-right">الحساب</TableHead>
+                    <TableHead className="text-right">نوع العملية</TableHead>
+                    <TableHead className="text-left">المبلغ</TableHead>
+                    <TableHead className="text-right">ملاحظات</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {repayments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">No payment history yet</TableCell>
+                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">لا يوجد سجل مدفوعات حتى الآن</TableCell>
                     </TableRow>
                   ) : (
                     repayments.map(rep => {
                       const acc = debtAccounts.find(a => a.id === rep.debtAccountId);
                       return (
                         <TableRow key={rep.id}>
-                          <TableCell className="text-xs">{new Date(rep.timestamp).toLocaleDateString()}</TableCell>
-                          <TableCell className="font-semibold">{acc?.name}</TableCell>
-                          <TableCell>
+                          <TableCell className="text-xs text-right font-bold">{new Date(rep.timestamp).toLocaleDateString('ar-EG')}</TableCell>
+                          <TableCell className="font-bold text-right">{acc?.name}</TableCell>
+                          <TableCell className="text-right">
                             {rep.type === 'PAYMENT' ? (
-                              <span className="text-red-600 flex items-center gap-1 text-xs font-bold uppercase"><TrendingDown className="h-3 w-3"/> Payment Out</span>
+                              <span className="text-red-600 flex items-center gap-1 text-xs font-black uppercase justify-end">سداد خارج <TrendingDown className="h-3 w-3"/></span>
                             ) : (
-                              <span className="text-emerald-600 flex items-center gap-1 text-xs font-bold uppercase"><TrendingUp className="h-3 w-3"/> Receipt In</span>
+                              <span className="text-emerald-600 flex items-center gap-1 text-xs font-black uppercase justify-end">استلام داخل <TrendingUp className="h-3 w-3"/></span>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-mono font-bold">${rep.amount.toLocaleString()}</TableCell>
-                          <TableCell className="text-xs italic text-muted-foreground">{rep.note || '-'}</TableCell>
+                          <TableCell className="text-left font-mono font-black text-[#336699]">{rep.amount.toLocaleString()} $</TableCell>
+                          <TableCell className="text-xs italic text-muted-foreground text-right">{rep.note || '-'}</TableCell>
                         </TableRow>
                       );
                     })

@@ -5,8 +5,8 @@ import { WarehouseProvider } from './lib/store';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'تدفق المستودع | Flow Warehouse',
-  description: 'Smart Inventory and Debt Management System',
+  title: 'تدفق المستودع | نظام إدارة المخازن والديون',
+  description: 'نظام ذكي لإدارة المخزون، الديون، والمصاريف',
 };
 
 export default function RootLayout({
@@ -15,13 +15,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="ar" dir="rtl">
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Kufi+Arabic:wght@100..900&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased bg-background text-foreground">
+      <body className="font-sans antialiased bg-background text-foreground" style={{ fontFamily: "'Noto Kufi Arabic', 'Inter', sans-serif" }}>
         <WarehouseProvider>
           {children}
           <Toaster />

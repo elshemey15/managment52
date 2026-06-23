@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tags, Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Tags } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -29,31 +29,35 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
+    <div className="max-w-4xl mx-auto space-y-6 text-right">
       <div>
-        <h1 className="text-3xl font-bold text-[#336699]">Product Categories</h1>
-        <p className="text-muted-foreground">Organize your inventory into departments</p>
+        <h1 className="text-3xl font-bold text-[#336699]">تصنيفات المنتجات</h1>
+        <p className="text-muted-foreground font-medium">تنظيم المخزون حسب الأقسام</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <Card className="md:col-span-1 border-none shadow-sm h-fit">
           <CardHeader>
-            <CardTitle className="text-lg">New Category</CardTitle>
+            <CardTitle className="text-lg text-right flex items-center gap-2 justify-end">
+              إضافة تصنيف جديد
+              <Tags className="h-5 w-5 text-accent" />
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleAdd} className="space-y-4">
+            <form onSubmit={handleAdd} className="space-y-4 text-right">
               <div className="space-y-2">
-                <Label htmlFor="catname">Category Name</Label>
+                <Label htmlFor="catname">اسم التصنيف</Label>
                 <Input 
                   id="catname" 
-                  placeholder="e.g. Spare Parts" 
+                  placeholder="مثال: قطع غيار، أثاث..." 
                   value={newCatName} 
                   onChange={(e) => setNewCatName(e.target.value)}
                   disabled={!canEdit()}
+                  className="text-right"
                 />
               </div>
-              <Button type="submit" className="w-full bg-[#336699]" disabled={!canEdit()}>
-                <Plus className="h-4 w-4 mr-2" /> Add Category
+              <Button type="submit" className="w-full bg-[#336699] font-bold" disabled={!canEdit()}>
+                <Plus className="h-4 w-4 ml-2" /> إضافة التصنيف
               </Button>
             </form>
           </CardContent>
@@ -64,20 +68,20 @@ export default function CategoriesPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50">
-                  <TableHead>Category Name</TableHead>
-                  <TableHead className="text-center">Items Count</TableHead>
-                  {isAdmin() && <TableHead className="text-right">Actions</TableHead>}
+                  <TableHead className="text-right">اسم التصنيف</TableHead>
+                  <TableHead className="text-center">عدد المواد</TableHead>
+                  {isAdmin() && <TableHead className="text-left">خيارات</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {categories.map((cat) => (
                   <TableRow key={cat.id}>
-                    <TableCell className="font-semibold">{cat.name}</TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="font-bold text-right">{cat.name}</TableCell>
+                    <TableCell className="text-center font-black">
                       {items.filter(i => i.categoryId === cat.id).length}
                     </TableCell>
                     {isAdmin() && (
-                      <TableCell className="text-right">
+                      <TableCell className="text-left">
                         <Button variant="ghost" size="icon" className="text-destructive">
                           <Trash2 className="h-4 w-4" />
                         </Button>

@@ -8,7 +8,6 @@ import {
   Package, 
   ArrowLeftRight, 
   Users, 
-  ReceiptArabic, 
   BarChart3, 
   Settings, 
   LogOut,
@@ -35,21 +34,27 @@ export function DashboardSidebar() {
   const pathname = usePathname();
 
   const navItems = [
-    { name: 'Dashboard', icon: LayoutDashboard, href: '/dashboard' },
-    { name: 'Inventory', icon: Package, href: '/dashboard/inventory' },
-    { name: 'Categories', icon: Tags, href: '/dashboard/categories' },
-    { name: 'Movements', icon: ArrowLeftRight, href: '/dashboard/movements' },
-    { name: 'Accounts & Debts', icon: Users, href: '/dashboard/accounts' },
-    { name: 'Expenses', icon: Wallet, href: '/dashboard/expenses' },
+    { name: 'لوحة التحكم', icon: LayoutDashboard, href: '/dashboard' },
+    { name: 'المخزون', icon: Package, href: '/dashboard/inventory' },
+    { name: 'الأصناف', icon: Tags, href: '/dashboard/categories' },
+    { name: 'حركات المخزن', icon: ArrowLeftRight, href: '/dashboard/movements' },
+    { name: 'الحسابات والديون', icon: Users, href: '/dashboard/accounts' },
+    { name: 'المصاريف العامة', icon: Wallet, href: '/dashboard/expenses' },
   ];
 
   if (isAdmin()) {
-    navItems.push({ name: 'Financial Reports', icon: BarChart3, href: '/dashboard/reports' });
-    navItems.push({ name: 'User Settings', icon: Settings, href: '/dashboard/settings' });
+    navItems.push({ name: 'التقارير المالية', icon: BarChart3, href: '/dashboard/reports' });
+    navItems.push({ name: 'إعدادات المستخدمين', icon: Settings, href: '/dashboard/settings' });
   }
 
+  const roleMap: Record<string, string> = {
+    'Admin': 'مدير النظام',
+    'Editor': 'محرر',
+    'Logger': 'مدخل بيانات'
+  };
+
   return (
-    <Sidebar className="border-r">
+    <Sidebar className="border-l" side="right">
       <SidebarHeader className="p-6">
         <div className="flex items-center gap-3">
           <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center">
@@ -61,7 +66,7 @@ export function DashboardSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/60 px-4 mb-2">Management</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/60 px-4 mb-2 text-right">الإدارة العامة</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => (
@@ -73,7 +78,7 @@ export function DashboardSidebar() {
                   >
                     <Link href={item.href} className="flex items-center gap-3 py-2 px-4 rounded-md">
                       <item.icon className="h-5 w-5" />
-                      <span>{item.name}</span>
+                      <span className="font-medium">{item.name}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -84,16 +89,16 @@ export function DashboardSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
-        <div className="mb-4 px-2">
-          <p className="text-xs text-sidebar-foreground/60">Logged in as</p>
-          <p className="font-semibold text-sm truncate">{currentUser?.username} ({currentUser?.role})</p>
+        <div className="mb-4 px-2 text-right">
+          <p className="text-xs text-sidebar-foreground/60">تسجيل الدخول بصفتك</p>
+          <p className="font-bold text-sm truncate">{currentUser?.username} ({roleMap[currentUser?.role || ''] || currentUser?.role})</p>
         </div>
         <SidebarMenuButton 
           onClick={logout}
           className="w-full flex items-center gap-3 py-2 px-4 rounded-md text-sidebar-foreground hover:bg-destructive/20 hover:text-destructive"
         >
           <LogOut className="h-5 w-5" />
-          <span>Logout</span>
+          <span className="font-bold">تسجيل الخروج</span>
         </SidebarMenuButton>
       </SidebarFooter>
     </Sidebar>
