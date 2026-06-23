@@ -1,12 +1,11 @@
-
 import type { Metadata } from 'next';
 import './globals.css';
 import { WarehouseProvider } from './lib/store';
 import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'تدفق المستودع | نظام إدارة المخازن والديون',
-  description: 'نظام ذكي لإدارة المخزون، الديون، والمصاريف',
+  title: 'A-E Storage Ecosystem | نظام إدارة المخازن والديون',
+  description: 'نظام ذكي وشامل لإدارة المخزون، الديون، والمصاريف',
 };
 
 export default function RootLayout({

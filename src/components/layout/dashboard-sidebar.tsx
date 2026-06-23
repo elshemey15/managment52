@@ -1,4 +1,3 @@
-
 "use client";
 
 import React from 'react';
@@ -60,7 +59,7 @@ export function DashboardSidebar() {
           <div className="h-8 w-8 rounded-lg bg-accent flex items-center justify-center">
             <Package className="h-5 w-5 text-accent-foreground" />
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-sidebar-foreground">تدفق المستودع</h1>
+          <h1 className="text-lg font-black tracking-tighter text-sidebar-foreground uppercase">A-E Storage</h1>
         </div>
       </SidebarHeader>
 
@@ -78,7 +77,7 @@ export function DashboardSidebar() {
                   >
                     <Link href={item.href} className="flex items-center gap-3 py-2 px-4 rounded-md">
                       <item.icon className="h-5 w-5" />
-                      <span className="font-medium">{item.name}</span>
+                      <span className="font-bold">{item.name}</span>
                     </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -90,8 +89,11 @@ export function DashboardSidebar() {
 
       <SidebarFooter className="p-4 border-t border-sidebar-border">
         <div className="mb-4 px-2 text-right">
-          <p className="text-xs text-sidebar-foreground/60">تسجيل الدخول بصفتك</p>
-          <p className="font-bold text-sm truncate">{currentUser?.username} ({roleMap[currentUser?.role || ''] || currentUser?.role})</p>
+          <p className="text-[10px] text-sidebar-foreground/60">تسجيل الدخول بصفتك</p>
+          <p className="font-bold text-sm truncate">{currentUser?.username}</p>
+          <p className="text-[10px] bg-sidebar-accent inline-block px-2 py-0.5 rounded-full mt-1">
+            {roleMap[currentUser?.role || ''] || currentUser?.role}
+          </p>
         </div>
         <SidebarMenuButton 
           onClick={logout}

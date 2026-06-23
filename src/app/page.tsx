@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -31,7 +30,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#E6ECF2] p-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#E6ECF2] p-4" dir="rtl">
       <div className="w-full max-w-md animate-in fade-in zoom-in duration-500 text-center">
         <div className="flex justify-center mb-8">
           <div className="bg-[#336699] p-4 rounded-2xl shadow-xl">
@@ -41,12 +40,12 @@ export default function LoginPage() {
         
         <Card className="shadow-2xl border-none">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-3xl font-bold tracking-tight text-[#336699]">تدفق المستودع</CardTitle>
-            <CardDescription className="text-base font-medium">أدخل بياناتك لإدارة المستودع الخاص بك</CardDescription>
+            <CardTitle className="text-2xl font-black tracking-tight text-[#336699] uppercase">A-E Storage Ecosystem</CardTitle>
+            <CardDescription className="text-base font-medium">أدخل بياناتك لإدارة النظام الخاص بك</CardDescription>
           </CardHeader>
           <form onSubmit={handleLogin}>
             <CardContent className="space-y-4 pt-4 text-right">
-              <div className="space-y-2">
+              <div className="space-y-2 text-right">
                 <div className="relative">
                   <User className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input 
@@ -58,7 +57,7 @@ export default function LoginPage() {
                   />
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-2 text-right">
                 <div className="relative">
                   <Lock className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input 
@@ -80,7 +79,7 @@ export default function LoginPage() {
         </Card>
 
         <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>© 2025 نظام تدفق المستودع. جميع الحقوق محفوظة.</p>
+          <p>© 2025 A-E Storage Ecosystem. جميع الحقوق محفوظة.</p>
         </div>
       </div>
     </div>
