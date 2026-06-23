@@ -97,7 +97,13 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     ];
 
     const savedUser = localStorage.getItem('ae_current_user');
-    if (savedUser) setCurrentUser(JSON.parse(savedUser));
+    if (savedUser) {
+      try {
+        setCurrentUser(JSON.parse(savedUser));
+      } catch (e) {
+        localStorage.removeItem('ae_current_user');
+      }
+    }
     
     setIsLoaded(true);
     return () => unsubscribers.forEach(u => u());
@@ -115,12 +121,21 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const emergencyLogin = (k: string) => {
     if (k === MASTER_KEY) {
-      const admin = users.find(u => u.role === 'Admin') || users[0];
-      if (admin) {
-        setCurrentUser(admin);
-        localStorage.setItem('ae_current_user', JSON.stringify(admin));
-        return true;
+      // البحث عن أول مدير موجود في النظام
+      let admin = users.find(u => u.role === 'Admin');
+      
+      // إذا كان النظام فارغاً، ننشئ جلسة دخول افتراضية بلقب المدير
+      if (!admin) {
+        admin = {
+          id: 'root-admin',
+          username: 'Abdallah_Root',
+          role: 'Admin'
+        };
       }
+      
+      setCurrentUser(admin);
+      localStorage.setItem('ae_current_user', JSON.stringify(admin));
+      return true;
     }
     return false;
   };

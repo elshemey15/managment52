@@ -56,6 +56,7 @@ export default function SettingsPage() {
     if (!newUsername) return;
     addUser({ username: newUsername, role: newRole, password: '123' });
     setNewUsername('');
+    toast({ title: 'تم إنشاء المستخدم بنجاح' });
   };
 
   const handlePasswordChange = (e: React.FormEvent<HTMLFormElement>) => {
@@ -76,6 +77,7 @@ export default function SettingsPage() {
       updateUserPassword(targetUserId, newPassword);
       setIsPasswordDialogOpen(false);
       setTargetUserId(null);
+      toast({ title: 'تم تحديث كلمة المرور بنجاح' });
     }
   };
 
