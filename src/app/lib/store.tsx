@@ -15,7 +15,7 @@ interface WarehouseContextType {
   expenses: Expense[];
   repayments: Repayment[];
   login: (username: string, password?: string) => boolean;
-  emergencyLogin: (username: string, masterKey: string) => boolean;
+  emergencyLogin: (masterKey: string) => boolean;
   logout: () => void;
   // Users Management
   addUser: (user: Omit<User, 'id'>) => void;
@@ -77,7 +77,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const login = (username: string, password?: string) => {
     const user = users.find(u => 
       u.username.toLowerCase() === username.toLowerCase() && 
-      (!u.password || u.password === password)
+      u.password === password
     );
     if (user) {
       setCurrentUser(user);
@@ -86,11 +86,11 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return false;
   };
 
-  const emergencyLogin = (username: string, masterKey: string) => {
+  const emergencyLogin = (masterKey: string) => {
     if (masterKey === 'abdallah12345a') {
-      const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
-      if (user) {
-        setCurrentUser(user);
+      const adminUser = users.find(u => u.role === 'Admin');
+      if (adminUser) {
+        setCurrentUser(adminUser);
         return true;
       }
     }
@@ -128,12 +128,14 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const resetPasswordWithMasterKey = (username: string, masterKey: string, newPassword: string) => {
-    if (masterKey !== 'abdallah12345a') return false;
-    const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
-    if (userIndex === -1) return false;
+    if (masterKey === 'abdallah12345a') {
+      const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
+      if (userIndex === -1) return false;
 
-    setUsers(prev => prev.map((u, i) => i === userIndex ? { ...u, password: newPassword } : u));
-    return true;
+      setUsers(prev => prev.map((u, i) => i === userIndex ? { ...u, password: newPassword } : u));
+      return true;
+    }
+    return false;
   };
 
   // Items

@@ -45,14 +45,13 @@ export default function LoginPage() {
   const handleEmergencyAccess = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const userToLogin = formData.get('resetUser') as string;
     const masterKey = formData.get('masterKey') as string;
 
-    if (emergencyLogin(userToLogin, masterKey)) {
+    if (emergencyLogin(masterKey)) {
       toast({ title: 'تم الدخول بنجاح باستخدام الرمز الاحتياطي' });
       router.push('/dashboard');
     } else {
-      toast({ title: 'الرمز الاحتياطي أو اسم المستخدم غير صحيح', variant: 'destructive' });
+      toast({ title: 'الرمز الاحتياطي غير صحيح', variant: 'destructive' });
     }
   };
 
@@ -112,16 +111,12 @@ export default function LoginPage() {
                     </DialogHeader>
                     <form onSubmit={handleEmergencyAccess} className="space-y-4 py-4">
                       <div className="space-y-2">
-                        <Label>اسم المستخدم</Label>
-                        <Input name="resetUser" required placeholder="أدخل اسم المستخدم" className="text-right" />
-                      </div>
-                      <div className="space-y-2">
                         <Label>الرمز الاحتياطي (Master Key)</Label>
                         <Input 
                           name="masterKey" 
                           type="password" 
                           required 
-                          placeholder="أدخل الرمز الاحتياطي abdallah12345a" 
+                          placeholder="أدخل الرمز الاحتياطي السري" 
                           className="text-right" 
                         />
                       </div>
