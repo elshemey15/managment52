@@ -7,7 +7,19 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Package, ArrowDownLeft, ArrowUpRight, FolderOpen, CreditCard, Wallet, CheckCircle2 } from 'lucide-react';
+import { 
+  Plus, 
+  Search, 
+  Edit2, 
+  Trash2, 
+  Package, 
+  ArrowDownLeft, 
+  ArrowUpRight, 
+  FolderOpen, 
+  CreditCard, 
+  Wallet, 
+  CheckCircle2 
+} from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -42,13 +54,30 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 export default function InventoryPage() {
-  const { items, departments, units, suppliers, purchases, addItem, updateItem, deleteItem, addPurchase, canEdit, isAdmin } = useWarehouse();
+  const { 
+    items, 
+    departments, 
+    units, 
+    suppliers, 
+    purchases, 
+    addItem, 
+    updateItem, 
+    deleteItem, 
+    addPurchase, 
+    recordSimpleMovement,
+    canEdit, 
+    isAdmin 
+  } = useWarehouse();
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
+  const [movementType, setMovementType] = useState<'IN' | 'OUT'>('IN');
+  
   const [editingItem, setEditingItem] = useState<any>(null);
   const [activeItem, setActiveItem] = useState<any>(null);
   const [movementQty, setMovementQty] = useState<number>(1);
+  const [movementNote, setMovementNote] = useState<string>('');
   const [paidNow, setPaidNow] = useState<number>(0);
   const [selectedSupplierId, setSelectedSupplierId] = useState<string>('');
 
@@ -91,29 +120,33 @@ export default function InventoryPage() {
     resetDialog();
   };
 
-  const handleInwardSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleMovementSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!selectedSupplierId || selectedSupplierId === 'none') {
-      return toast({ title: 'يرجى اختيار المورد لتسجيل الوارد', variant: 'destructive' });
+    
+    if (movementType === 'IN' && selectedSupplierId && selectedSupplierId !== 'none') {
+      // إذا كان وارداً ومرتبط بمورد، استخدم نظام المشتريات والديون
+      const supplier = suppliers.find(s => s.id === selectedSupplierId);
+      const totalVal = (activeItem?.purchasePrice || 0) * movementQty;
+
+      addPurchase({
+        supplierId: selectedSupplierId,
+        supplierName: supplier?.name || '',
+        date: new Date().toISOString(),
+        dueDate: new Date().toISOString(),
+        totalValue: totalVal,
+        paidAmount: paidNow,
+        items: [{ itemId: activeItem.id, qty: movementQty, price: activeItem.purchasePrice }]
+      }, [{ itemId: activeItem.id, qty: movementQty }]);
+    } else {
+      // حركة صرف أو وارد يدوي بسيط
+      recordSimpleMovement(activeItem.id, movementType, movementQty, movementNote);
     }
-
-    const supplier = suppliers.find(s => s.id === selectedSupplierId);
-    const totalVal = (activeItem?.purchasePrice || 0) * movementQty;
-
-    addPurchase({
-      supplierId: selectedSupplierId,
-      supplierName: supplier?.name || '',
-      date: new Date().toISOString(),
-      dueDate: new Date().toISOString(),
-      totalValue: totalVal,
-      paidAmount: paidNow,
-      items: [{ itemId: activeItem.id, qty: movementQty, price: activeItem.purchasePrice }]
-    }, [{ itemId: activeItem.id, qty: movementQty }]);
 
     setIsMovementDialogOpen(false);
     setActiveItem(null);
     setMovementQty(1);
     setPaidNow(0);
+    setMovementNote('');
     setSelectedSupplierId('');
   };
 
@@ -122,7 +155,7 @@ export default function InventoryPage() {
       p.items?.some((i: any) => i.itemId === itemId)
     );
     
-    if (itemPurchases.length === 0) return 'INITIAL'; // رصيد افتتاحى
+    if (itemPurchases.length === 0) return 'INITIAL'; 
 
     const hasUnpaid = itemPurchases.some(p => p.status !== 'PAID');
     return hasUnpaid ? 'DEBT' : 'PAID';
@@ -291,12 +324,27 @@ export default function InventoryPage() {
                                   className="text-emerald-600 border-emerald-600 hover:bg-emerald-50 h-8 font-bold"
                                   onClick={() => {
                                     setActiveItem(item);
+                                    setMovementType('IN');
                                     setMovementQty(1);
                                     setPaidNow(0);
                                     setIsMovementDialogOpen(true);
                                   }}
                                 >
-                                  <ArrowDownLeft className="h-3 w-3 ml-1" /> وارد (توريد)
+                                  <ArrowDownLeft className="h-3 w-3 ml-1" /> وارد
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-amber-600 border-amber-600 hover:bg-amber-50 h-8 font-bold"
+                                  onClick={() => {
+                                    setActiveItem(item);
+                                    setMovementType('OUT');
+                                    setMovementQty(1);
+                                    setMovementNote('');
+                                    setIsMovementDialogOpen(true);
+                                  }}
+                                >
+                                  <ArrowUpRight className="h-3 w-3 ml-1" /> منصرف
                                 </Button>
                               </div>
                             </TableCell>
@@ -350,28 +398,32 @@ export default function InventoryPage() {
       <Dialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen}>
         <DialogContent dir="rtl" className="text-right sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>تسجيل وارد (توريد بضاعة)</DialogTitle>
+            <DialogTitle>
+              {movementType === 'IN' ? 'تسجيل وارد (إضافة للمخزون)' : 'تسجيل منصرف (سحب من المخزون)'}
+            </DialogTitle>
           </DialogHeader>
           {activeItem && (
-            <form onSubmit={handleInwardSubmit} className="space-y-6 py-4">
+            <form onSubmit={handleMovementSubmit} className="space-y-6 py-4">
               <div className="bg-slate-50 p-4 rounded-lg border">
                 <p className="text-sm font-bold text-[#336699]">{activeItem.name}</p>
                 <div className="flex justify-between mt-2 text-xs font-bold text-muted-foreground">
                   <span>الكود: {activeItem.code}</span>
                   <span>المتوفر: {activeItem.currentStock.toLocaleString()}</span>
-                  <span>سعر الشراء: {activeItem.purchasePrice || 0} $</span>
+                  <span>{movementType === 'IN' ? 'سعر الشراء: ' : 'سعر البيع: '} {movementType === 'IN' ? activeItem.purchasePrice : activeItem.salePrice} $</span>
                 </div>
               </div>
               
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Label>الكمية الموردة</Label>
-                  <span className="text-xs font-black bg-blue-50 text-blue-700 px-3 py-1 rounded-full">{movementQty}</span>
+                  <Label>الكمية {movementType === 'IN' ? 'الموردة' : 'الخارجة'}</Label>
+                  <span className={`text-xs font-black px-3 py-1 rounded-full ${movementType === 'IN' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
+                    {movementQty}
+                  </span>
                 </div>
                 
                 <Slider 
                   value={[movementQty]} 
-                  max={1000} 
+                  max={Math.max(1000, activeItem.currentStock + 100)} 
                   step={0.1}
                   className="py-4"
                   onValueChange={(vals) => setMovementQty(vals[0])}
@@ -389,48 +441,63 @@ export default function InventoryPage() {
                 />
               </div>
 
-              <div className="space-y-4 p-4 bg-slate-50/50 rounded-xl border border-dashed">
-                <div className="space-y-2">
-                  <Label>اختيار المورد (لربط الدين)</Label>
-                  <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
-                    <SelectTrigger className="text-right h-11">
-                      <SelectValue placeholder="اختر المورد" />
-                    </SelectTrigger>
-                    <SelectContent dir="rtl">
-                      {suppliers.map(sup => (
-                        <SelectItem key={sup.id} value={sup.id}>{sup.name} (الدين: {sup.balance} $)</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
+              {movementType === 'IN' ? (
+                <div className="space-y-4 p-4 bg-slate-50/50 rounded-xl border border-dashed">
                   <div className="space-y-2">
-                    <Label>المبلغ المدفوع كاش</Label>
-                    <div className="relative">
-                      <CreditCard className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
-                      <Input 
-                        type="number" 
-                        step="0.01" 
-                        className="text-right pr-10 h-11" 
-                        value={paidNow}
-                        onChange={(e) => setPaidNow(parseFloat(e.target.value) || 0)}
-                        placeholder="0.00"
-                      />
+                    <Label>اختيار المورد (اختياري لربط الدين)</Label>
+                    <Select value={selectedSupplierId} onValueChange={setSelectedSupplierId}>
+                      <SelectTrigger className="text-right h-11">
+                        <SelectValue placeholder="اختر المورد أو اتركه فارغاً" />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        <SelectItem value="none">بدون مورد (وارد يدوي)</SelectItem>
+                        {suppliers.map(sup => (
+                          <SelectItem key={sup.id} value={sup.id}>{sup.name} (الدين: {sup.balance} $)</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedSupplierId && selectedSupplierId !== 'none' && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>المبلغ المدفوع الآن</Label>
+                        <Input 
+                          type="number" 
+                          step="0.01" 
+                          className="text-right h-11" 
+                          value={paidNow}
+                          onChange={(e) => setPaidNow(parseFloat(e.target.value) || 0)}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      <div className="flex flex-col justify-end text-left">
+                        <p className="text-[10px] text-muted-foreground font-bold mb-1">إجمالي التوريد: {totalValue.toLocaleString()} $</p>
+                        <p className={`text-sm font-black ${remainingDebt > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                          {remainingDebt > 0 ? `المتبقي: ${remainingDebt.toLocaleString()} $` : 'تم الدفع بالكامل'}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex flex-col justify-end text-left">
-                    <p className="text-[10px] text-muted-foreground font-bold mb-1">إجمالي التوريد: {totalValue.toLocaleString()} $</p>
-                    <p className={`text-sm font-black ${remainingDebt > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                      {remainingDebt > 0 ? `المتبقي (دين): ${remainingDebt.toLocaleString()} $` : 'تم الدفع بالكامل'}
-                    </p>
-                  </div>
+                  )}
                 </div>
+              ) : null}
+
+              <div className="space-y-2">
+                <Label>ملاحظات إضافية</Label>
+                <Input 
+                  value={movementNote}
+                  onChange={(e) => setMovementNote(e.target.value)}
+                  placeholder="اكتب تفاصيل إضافية هنا..." 
+                  className="text-right h-11"
+                />
               </div>
 
               <DialogFooter>
-                <Button type="submit" className="w-full font-bold h-12 text-lg shadow-lg bg-emerald-600 hover:bg-emerald-700">
-                  تأكيد توريد البضاعة
+                <Button 
+                  type="submit" 
+                  className={`w-full font-bold h-12 text-lg shadow-lg ${movementType === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'}`}
+                >
+                  تأكيد تسجيل الـ {movementType === 'IN' ? 'وارد' : 'منصرف'}
                 </Button>
               </DialogFooter>
             </form>

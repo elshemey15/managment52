@@ -59,6 +59,7 @@ interface WarehouseContextType {
   addExpense: (expense: Omit<Expense, 'id' | 'timestamp' | 'userId'>) => void;
   deleteExpense: (id: string) => void;
   
+  recordSimpleMovement: (itemId: string, type: 'IN' | 'OUT', qty: number, note: string) => Promise<void>;
   deleteMovement: (id: string) => void;
   
   canEdit: () => boolean;
@@ -226,6 +227,28 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toast({ title: 'تم الحفظ والمزامنة السحابية بنجاح' });
   };
 
+  const recordSimpleMovement = async (itemId: string, type: 'IN' | 'OUT', qty: number, note: string) => {
+    const batch = writeBatch(db);
+    const itemRef = doc(db, 'items', itemId);
+    const item = items.find(i => i.id === itemId);
+    
+    batch.update(itemRef, { currentStock: increment(type === 'IN' ? qty : -qty) });
+    
+    const moveRef = doc(collection(db, 'movements'));
+    batch.set(moveRef, {
+      itemId,
+      type,
+      quantity: qty,
+      priceAtTime: type === 'IN' ? (item?.purchasePrice || 0) : (item?.salePrice || 0),
+      userId: currentUser?.id || 'system',
+      timestamp: serverTimestamp(),
+      note: note || (type === 'IN' ? 'توريد يدوي' : 'صرف يدوي')
+    });
+    
+    await batch.commit();
+    toast({ title: type === 'IN' ? 'تم تسجيل الوارد بنجاح' : 'تم تسجيل المنصرف بنجاح' });
+  };
+
   const addPayment = async (p: any) => {
     const supplier = suppliers.find(s => s.id === p.supplierId);
     if (!supplier) return;
@@ -250,7 +273,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       login, emergencyLogin, logout, addUser, deleteUser, updateUserPassword,
       addDepartment, deleteDepartment, addUnit, deleteUnit,
       addItem, updateItem, deleteItem, addSupplier, updateSupplier, deleteSupplier,
-      addPurchase, addPayment, addExpense, deleteExpense, deleteMovement, canEdit, isAdmin
+      addPurchase, addPayment, addExpense, deleteExpense, recordSimpleMovement, deleteMovement, canEdit, isAdmin
     }}>
       {children}
     </WarehouseContext.Provider>
