@@ -2,13 +2,14 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Item, Movement, DebtAccount, Expense, Repayment, Department } from './types';
+import { User, Item, Movement, DebtAccount, Expense, Repayment, Department, Unit } from './types';
 import { toast } from '@/hooks/use-toast';
 
 interface WarehouseContextType {
   currentUser: User | null;
   users: User[];
   departments: Department[];
+  units: Unit[];
   items: Item[];
   movements: Movement[];
   debtAccounts: DebtAccount[];
@@ -20,8 +21,11 @@ interface WarehouseContextType {
   // Departments Management
   addDepartment: (dept: Omit<Department, 'id'>) => void;
   deleteDepartment: (id: string) => void;
+  // Units Management
+  addUnit: (unit: Omit<Unit, 'id'>) => void;
+  deleteUnit: (id: string) => void;
   // Items Management
-  addItem: (item: Omit<Item, 'id'>) => void;
+  addItem: (item: Omit<Item, 'id' | 'code'>) => void;
   updateItem: (id: string, item: Partial<Item>) => void;
   deleteItem: (id: string) => void;
   // Movements Management
@@ -57,8 +61,13 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     { id: 'd1', name: 'قسم الفواكه' },
   ]);
 
+  const [units, setUnits] = useState<Unit[]>([
+    { id: 'u1', name: 'قطعة' },
+    { id: 'u2', name: 'كيلو' },
+  ]);
+
   const [items, setItems] = useState<Item[]>([
-    { id: 'i1', code: 'F001', name: 'بطيخ أحمر كبير', departmentId: 'd1', unit: 'قطعة', purchasePrice: 5, salePrice: 8, currentStock: 100 },
+    { id: 'i1', code: '1', name: 'بطيخ أحمر كبير', departmentId: 'd1', unitId: 'u1', purchasePrice: 5, salePrice: 8, currentStock: 100 },
   ]);
 
   const [movements, setMovements] = useState<Movement[]>([]);
@@ -107,11 +116,40 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toast({ title: 'تم حذف القسم' });
   };
 
-  // Items
-  const addItem = (item: Omit<Item, 'id'>) => {
+  // Units
+  const addUnit = (unit: Omit<Unit, 'id'>) => {
     if (!canEdit()) return;
-    setItems(prev => [...prev, { ...item, id: Math.random().toString(36).substr(2, 9) }]);
-    toast({ title: 'تمت إضافة المادة بنجاح' });
+    setUnits(prev => [...prev, { ...unit, id: Math.random().toString(36).substr(2, 9) }]);
+    toast({ title: 'تمت إضافة وحدة القياس' });
+  };
+
+  const deleteUnit = (id: string) => {
+    if (!isAdmin()) return;
+    if (items.some(i => i.unitId === id)) {
+      return toast({ title: 'الوحدة مستخدمة في مواد حالية', variant: 'destructive' });
+    }
+    setUnits(prev => prev.filter(u => u.id !== id));
+    toast({ title: 'تم حذف وحدة القياس' });
+  };
+
+  // Items
+  const addItem = (item: Omit<Item, 'id' | 'code'>) => {
+    if (!canEdit()) return;
+    
+    // Auto-generate numeric code starting from 1
+    const maxCode = items.reduce((max, i) => {
+      const codeNum = parseInt(i.code);
+      return isNaN(codeNum) ? max : Math.max(max, codeNum);
+    }, 0);
+    
+    const newCode = (maxCode + 1).toString();
+
+    setItems(prev => [...prev, { 
+      ...item, 
+      id: Math.random().toString(36).substr(2, 9),
+      code: newCode
+    }]);
+    toast({ title: 'تمت إضافة المادة بنجاح بالكود: ' + newCode });
   };
 
   const updateItem = (id: string, itemData: Partial<Item>) => {
@@ -283,8 +321,8 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   return (
     <WarehouseContext.Provider value={{
-      currentUser, users, departments, items, movements, debtAccounts, expenses, repayments,
-      login, emergencyLogin, logout, addDepartment, deleteDepartment,
+      currentUser, users, departments, units, items, movements, debtAccounts, expenses, repayments,
+      login, emergencyLogin, logout, addDepartment, deleteDepartment, addUnit, deleteUnit,
       addItem, updateItem, deleteItem, addMovement, deleteMovement, addDebtAccount, deleteDebtAccount,
       addRepayment, deleteRepayment, addExpense, deleteExpense, addUser, deleteUser, updateUserPassword,
       canEdit, isAdmin

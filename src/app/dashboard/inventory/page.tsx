@@ -1,13 +1,13 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useWarehouse } from '@/app/lib/store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Filter, Edit2, Trash2, Package, ArrowDownLeft, ArrowUpRight, Sparkles } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, ArrowDownLeft, ArrowUpRight, FolderOpen, Layers } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -31,61 +31,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 export default function InventoryPage() {
-  const { items, departments, addItem, updateItem, deleteItem, addMovement, debtAccounts, canEdit, isAdmin } = useWarehouse();
+  const { items, departments, units, addItem, updateItem, deleteItem, addMovement, debtAccounts, canEdit, isAdmin } = useWarehouse();
   const [searchTerm, setSearchTerm] = useState('');
-  const [deptFilter, setDeptFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
   const [activeItem, setActiveItem] = useState<any>(null);
   const [movementType, setMovementType] = useState<'IN' | 'OUT'>('IN');
 
-  // Dialog States for New Item
   const [dialogDeptId, setDialogDeptId] = useState<string>('');
-  const [dialogItemName, setDialogItemName] = useState<string>('');
-  const [dialogItemCode, setDialogItemCode] = useState<string>('');
-
-  useEffect(() => {
-    if (isDialogOpen && !editingItem && dialogItemName && dialogDeptId) {
-      const dept = departments.find(d => d.id === dialogDeptId);
-      const prefix = (dept?.name?.substring(0, 3) || 'ITM').toUpperCase();
-      const random = Math.floor(1000 + Math.random() * 9000);
-      setDialogItemCode(`${prefix}-${random}`);
-    }
-  }, [dialogItemName, dialogDeptId, isDialogOpen, editingItem, departments]);
+  const [dialogUnitId, setDialogUnitId] = useState<string>('');
 
   const filteredItems = items.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          item.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesDept = deptFilter === 'all' || item.departmentId === deptFilter;
-    return matchesSearch && matchesDept;
+    return item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+           item.code.toLowerCase().includes(searchTerm.toLowerCase());
   });
 
   const resetDialog = () => {
     setEditingItem(null);
     setDialogDeptId('');
-    setDialogItemName('');
-    setDialogItemCode('');
+    setDialogUnitId('');
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const itemData = {
-      name: dialogItemName,
-      code: dialogItemCode,
+      name: formData.get('name') as string,
       departmentId: dialogDeptId,
-      unit: formData.get('unit') as string,
+      unitId: dialogUnitId,
       purchasePrice: parseFloat(formData.get('purchasePrice') as string),
       salePrice: parseFloat(formData.get('salePrice') as string),
       currentStock: parseInt(formData.get('currentStock') as string || '0'),
     };
 
     if (!itemData.departmentId) return toast({ title: 'يرجى اختيار القسم', variant: 'destructive' });
+    if (!itemData.unitId) return toast({ title: 'يرجى اختيار وحدة القياس', variant: 'destructive' });
 
     if (editingItem) {
       updateItem(editingItem.id, itemData);
@@ -124,16 +115,15 @@ export default function InventoryPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[#336699]">مخزن المواد (المستودع)</h1>
-          <p className="text-muted-foreground font-medium">إدارة الكميات، الصرف، والوارد حسب الأقسام</p>
+          <p className="text-muted-foreground font-medium">إدارة الكميات والعمليات حسب الأقسام</p>
         </div>
         {canEdit() && (
           <Dialog open={isDialogOpen} onOpenChange={(val) => {
             setIsDialogOpen(val);
             if (!val) resetDialog();
             if (val && editingItem) {
-              setDialogItemName(editingItem.name);
-              setDialogItemCode(editingItem.code);
               setDialogDeptId(editingItem.departmentId);
+              setDialogUnitId(editingItem.unitId);
             }
           }}>
             <DialogTrigger asChild>
@@ -146,50 +136,50 @@ export default function InventoryPage() {
                 <DialogTitle className="text-right">{editingItem ? 'تعديل بيانات المادة' : 'إنشاء مادة جديدة'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 py-4 text-right">
-                <div className="space-y-2">
-                  <Label>اختر القسم التابع له</Label>
-                  <Select value={dialogDeptId} onValueChange={setDialogDeptId}>
-                    <SelectTrigger className="text-right">
-                      <SelectValue placeholder="اختر القسم" />
-                    </SelectTrigger>
-                    <SelectContent dir="rtl">
-                      {departments.map(d => (
-                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>القسم</Label>
+                    <Select value={dialogDeptId} onValueChange={setDialogDeptId}>
+                      <SelectTrigger className="text-right">
+                        <SelectValue placeholder="اختر القسم" />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        {departments.map(d => (
+                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>وحدة القياس</Label>
+                    <Select value={dialogUnitId} onValueChange={setDialogUnitId}>
+                      <SelectTrigger className="text-right">
+                        <SelectValue placeholder="اختر الوحدة" />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        {units.map(u => (
+                          <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="name">اسم المادة</Label>
                   <Input 
                     id="name" 
-                    value={dialogItemName} 
-                    onChange={(e) => setDialogItemName(e.target.value)} 
+                    name="name"
+                    defaultValue={editingItem?.name}
                     required 
-                    placeholder="اسم المادة بالكامل" 
+                    placeholder="مثال: بطيخ أحمر كبير" 
                     className="text-right" 
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="code" className="flex items-center gap-1 justify-end text-blue-600">
-                      كود المادة (تلقائي) <Sparkles className="h-3 w-3" />
-                    </Label>
-                    <Input 
-                      id="code" 
-                      value={dialogItemCode} 
-                      onChange={(e) => setDialogItemCode(e.target.value)} 
-                      required 
-                      className="text-right font-mono bg-slate-50" 
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="unit">وحدة القياس</Label>
-                    <Input id="unit" name="unit" defaultValue={editingItem?.unit} required placeholder="مثال: قطعة، كجم" className="text-right" />
-                  </div>
-                </div>
+                {!editingItem && (
+                   <p className="text-[10px] text-blue-600 font-bold">* سيتم توليد الكود تلقائياً عند الحفظ</p>
+                )}
 
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
@@ -216,125 +206,125 @@ export default function InventoryPage() {
         )}
       </div>
 
-      <Card className="border-none shadow-sm overflow-hidden">
-        <CardHeader className="bg-white/50 border-b">
-          <div className="flex flex-col md:flex-row-reverse gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="ابحث بالاسم أو الكود..." 
-                className="pr-9 text-right font-medium"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <div className="flex items-center gap-2 flex-row-reverse">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={deptFilter} onValueChange={setDeptFilter}>
-                <SelectTrigger className="w-[180px] text-right">
-                  <SelectValue placeholder="تصفية حسب القسم" />
-                </SelectTrigger>
-                <SelectContent dir="rtl">
-                  <SelectItem value="all">كل الأقسام</SelectItem>
-                  {departments.map(d => (
-                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-slate-50">
-                <TableHead className="w-[120px] text-right">الكود</TableHead>
-                <TableHead className="text-right">اسم المادة</TableHead>
-                <TableHead className="text-right">القسم</TableHead>
-                <TableHead className="text-center">الكمية المتاحة</TableHead>
-                <TableHead className="text-center">تسجيل حركة</TableHead>
-                <TableHead className="text-center">الحالة</TableHead>
-                <TableHead className="w-[120px] text-center">خيارات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-2 opacity-20" />
-                    لم يتم العثور على أي مواد مطابقة
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredItems.map((item) => {
-                  const dept = departments.find(d => d.id === item.departmentId);
-                  return (
-                    <TableRow key={item.id} className="group">
-                      <TableCell className="font-mono text-xs font-bold text-right">{item.code}</TableCell>
-                      <TableCell className="font-bold text-right">{item.name}</TableCell>
-                      <TableCell className="text-right text-xs">{dept?.name || '-'}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="text-xl font-black text-[#336699]">{item.currentStock}</div>
-                        <div className="text-[10px] text-muted-foreground uppercase">{item.unit}</div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="text-emerald-600 border-emerald-600 hover:bg-emerald-50 h-8 font-bold"
-                            onClick={() => {
-                              setActiveItem(item);
-                              setMovementType('IN');
-                              setIsMovementDialogOpen(true);
-                            }}
-                          >
-                            <ArrowDownLeft className="h-3 w-3 ml-1" /> وارد
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="text-amber-600 border-amber-600 hover:bg-amber-50 h-8 font-bold"
-                            onClick={() => {
-                              setActiveItem(item);
-                              setMovementType('OUT');
-                              setIsMovementDialogOpen(true);
-                            }}
-                          >
-                            <ArrowUpRight className="h-3 w-3 ml-1" /> صرف
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {item.currentStock < 10 ? (
-                          <Badge variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-100 border-none">مخزون منخفض</Badge>
-                        ) : (
-                          <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-none">متوفر</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        <div className="flex justify-center gap-1">
-                          <Button variant="ghost" size="icon" onClick={() => {
-                            setEditingItem(item);
-                            setIsDialogOpen(true);
-                          }}>
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          {isAdmin() && (
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteItem(item.id)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
+      <div className="relative">
+        <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input 
+          placeholder="ابحث بالاسم أو الكود في جميع الأقسام..." 
+          className="pr-9 text-right font-medium"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      <Accordion type="multiple" className="w-full space-y-4">
+        {departments.map((dept) => {
+          const deptItems = filteredItems.filter(i => i.departmentId === dept.id);
+          if (searchTerm && deptItems.length === 0) return null;
+
+          return (
+            <AccordionItem key={dept.id} value={dept.id} className="border rounded-xl bg-white shadow-sm overflow-hidden">
+              <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-slate-50 transition-colors">
+                <div className="flex items-center gap-3 flex-row-reverse w-full">
+                  <div className="p-2 bg-[#336699]/10 rounded-lg">
+                    <FolderOpen className="h-5 w-5 text-[#336699]" />
+                  </div>
+                  <div className="text-right flex-1">
+                    <span className="text-lg font-black text-slate-800">{dept.name}</span>
+                    <p className="text-xs text-muted-foreground font-bold">يحتوي على {deptItems.length} مادة</p>
+                  </div>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-0 pb-0 border-t">
+                <Table>
+                  <TableHeader>
+                    <TableRow className="bg-slate-50/50">
+                      <TableHead className="w-[80px] text-right">الكود</TableHead>
+                      <TableHead className="text-right">اسم المادة</TableHead>
+                      <TableHead className="text-center">الكمية</TableHead>
+                      <TableHead className="text-center">تسجيل حركة</TableHead>
+                      <TableHead className="text-center">الحالة</TableHead>
+                      <TableHead className="w-[100px] text-center">خيارات</TableHead>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {deptItems.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground italic">
+                          لا توجد مواد في هذا القسم حالياً
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      deptItems.map((item) => {
+                        const unit = units.find(u => u.id === item.unitId);
+                        return (
+                          <TableRow key={item.id} className="hover:bg-slate-50/30">
+                            <TableCell className="font-mono text-xs font-bold text-right text-[#336699]">{item.code}</TableCell>
+                            <TableCell className="font-bold text-right">{item.name}</TableCell>
+                            <TableCell className="text-center">
+                              <div className="text-lg font-black text-slate-700">{item.currentStock}</div>
+                              <div className="text-[10px] text-muted-foreground font-bold">{unit?.name || 'قطعة'}</div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex justify-center gap-2">
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-emerald-600 border-emerald-600 hover:bg-emerald-50 h-8 font-bold"
+                                  onClick={() => {
+                                    setActiveItem(item);
+                                    setMovementType('IN');
+                                    setIsMovementDialogOpen(true);
+                                  }}
+                                >
+                                  <ArrowDownLeft className="h-3 w-3 ml-1" /> وارد
+                                </Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="text-amber-600 border-amber-600 hover:bg-amber-50 h-8 font-bold"
+                                  onClick={() => {
+                                    setActiveItem(item);
+                                    setMovementType('OUT');
+                                    setIsMovementDialogOpen(true);
+                                  }}
+                                >
+                                  <ArrowUpRight className="h-3 w-3 ml-1" /> صرف
+                                </Button>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {item.currentStock < 10 ? (
+                                <Badge variant="destructive" className="bg-red-100 text-red-700 border-none font-bold">منخفض</Badge>
+                              ) : (
+                                <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-none font-bold">متوفر</Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <div className="flex justify-center gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => {
+                                  setEditingItem(item);
+                                  setIsDialogOpen(true);
+                                }}>
+                                  <Edit2 className="h-4 w-4" />
+                                </Button>
+                                {isAdmin() && (
+                                  <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteItem(item.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </AccordionContent>
+            </AccordionItem>
+          );
+        })}
+      </Accordion>
 
       <Dialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen}>
         <DialogContent dir="rtl" className="text-right">
@@ -345,10 +335,10 @@ export default function InventoryPage() {
             <form onSubmit={handleMovementSubmit} className="space-y-4 py-4">
               <div className="bg-slate-50 p-3 rounded-lg border">
                 <p className="text-sm font-bold">{activeItem.name}</p>
-                <p className="text-xs text-muted-foreground">الكود: {activeItem.code} | المتوفر: {activeItem.currentStock} {activeItem.unit}</p>
+                <p className="text-xs text-muted-foreground">الكود: {activeItem.code} | المتوفر: {activeItem.currentStock}</p>
               </div>
               <div className="space-y-2">
-                <Label>الكمية ({activeItem.unit})</Label>
+                <Label>الكمية</Label>
                 <Input name="quantity" type="number" min="1" required className="text-right" defaultValue="1" />
               </div>
               <div className="space-y-2">

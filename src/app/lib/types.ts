@@ -13,12 +13,17 @@ export interface Department {
   name: string;
 }
 
+export interface Unit {
+  id: string;
+  name: string;
+}
+
 export interface Item {
   id: string;
   code: string;
   name: string;
   departmentId: string;
-  unit: string;
+  unitId: string;
   purchasePrice: number;
   salePrice: number;
   currentStock: number;
