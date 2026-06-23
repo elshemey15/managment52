@@ -29,32 +29,34 @@ export interface Item {
   currentStock: number;
 }
 
-export interface Movement {
-  id: string;
-  itemId: string;
-  type: 'IN' | 'OUT';
-  quantity: number;
-  priceAtTime: number;
-  debtAccountId?: string;
-  userId: string;
-  timestamp: string;
-}
-
-export interface DebtAccount {
+export interface Supplier {
   id: string;
   name: string;
-  type: 'SUPPLIER' | 'CUSTOMER';
-  balance: number; // Positive means we owe them (Supplier), negative means they owe us (Customer)
-  phone?: string;
+  phone: string;
+  address: string;
+  balance: number;
+  totalPurchases: number;
+  totalPayments: number;
 }
 
-export interface Repayment {
+export interface PurchaseInvoice {
   id: string;
-  debtAccountId: string;
+  supplierId: string;
+  supplierName: string;
+  date: string;
+  dueDate: string;
+  totalValue: number;
+  paidAmount: number;
+  remainingAmount: number;
+  status: 'PAID' | 'PARTIAL' | 'UNPAID';
+}
+
+export interface SupplierPayment {
+  id: string;
+  supplierId: string;
   amount: number;
-  type: 'PAYMENT' | 'RECEIPT';
-  userId: string;
-  timestamp: string;
+  date: string;
+  method: 'CASH' | 'TRANSFER' | 'CHECK';
   note?: string;
 }
 
@@ -65,4 +67,15 @@ export interface Expense {
   timestamp: string;
   category: string;
   userId: string;
+}
+
+export interface Movement {
+  id: string;
+  itemId: string;
+  type: 'IN' | 'OUT';
+  quantity: number;
+  priceAtTime: number;
+  debtAccountId?: string;
+  userId: string;
+  timestamp: string;
 }

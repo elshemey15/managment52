@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Receipt, TrendingUp, TrendingDown, Phone, Trash2 } from 'lucide-react';
+import { Plus, Receipt, Phone, MapPin, Trash2, Wallet, History } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -33,121 +33,97 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-export default function AccountsPage() {
-  const { debtAccounts, addDebtAccount, deleteDebtAccount, addRepayment, deleteRepayment, repayments, canEdit, isAdmin } = useWarehouse();
-  const [isAccDialogOpen, setIsAccDialogOpen] = useState(false);
-  const [isRepayDialogOpen, setIsRepayDialogOpen] = useState(false);
+export default function SuppliersPage() {
+  const { suppliers, addSupplier, deleteSupplier, payments, addPayment, isAdmin, canEdit } = useWarehouse();
+  const [isSupDialogOpen, setIsSupDialogOpen] = useState(false);
+  const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
 
-  const handleCreateAccount = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateSupplier = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    addDebtAccount({
+    addSupplier({
       name: formData.get('name') as string,
-      type: formData.get('type') as 'SUPPLIER' | 'CUSTOMER',
       phone: formData.get('phone') as string,
+      address: formData.get('address') as string,
     });
-    setIsAccDialogOpen(false);
+    setIsSupDialogOpen(false);
   };
 
-  const handleRepayment = (e: React.FormEvent<HTMLFormElement>) => {
+  const handlePayment = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const amount = parseFloat(formData.get('amount') as string);
-    const accountId = formData.get('accountId') as string;
-    const account = debtAccounts.find(a => a.id === accountId);
-
-    addRepayment({
-      debtAccountId: accountId,
-      amount,
-      type: account?.type === 'SUPPLIER' ? 'PAYMENT' : 'RECEIPT',
+    addPayment({
+      supplierId: formData.get('supplierId') as string,
+      amount: parseFloat(formData.get('amount') as string),
+      method: formData.get('method') as any,
       note: formData.get('note') as string,
     });
-    setIsRepayDialogOpen(false);
+    setIsPayDialogOpen(false);
   };
 
   return (
     <div className="space-y-6 text-right">
       <div className="flex justify-between items-center flex-row-reverse">
         <div>
-          <h1 className="text-3xl font-bold text-[#336699]">حسابات الموردين والعملاء</h1>
-          <p className="text-muted-foreground font-medium">إدارة الديون، السلف، والمستحقات المالية</p>
+          <h1 className="text-3xl font-bold text-[#336699]">وحدة الموردين والديون</h1>
+          <p className="text-muted-foreground font-medium">إدارة الحسابات المالية، المديونيات، وعمليات السداد</p>
         </div>
         <div className="flex gap-2">
           {canEdit() && (
             <>
-              <Dialog open={isRepayDialogOpen} onOpenChange={setIsRepayDialogOpen}>
+              <Dialog open={isPayDialogOpen} onOpenChange={setIsPayDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button variant="outline" className="border-[#336699] text-[#336699] hover:bg-[#336699] hover:text-white font-bold">
-                    <Receipt className="h-4 w-4 ml-2" /> تسجيل سداد / دفعة
+                  <Button variant="outline" className="border-[#336699] text-[#336699] font-bold">
+                    <Receipt className="ml-2 h-4 w-4" /> سداد دين
                   </Button>
                 </DialogTrigger>
                 <DialogContent dir="rtl">
-                  <DialogHeader>
-                    <DialogTitle className="text-right">تسوية دين / استلام مبلغ</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleRepayment} className="space-y-4 py-4 text-right">
+                  <DialogHeader><DialogTitle className="text-right">تسجيل سداد لمورد</DialogTitle></DialogHeader>
+                  <form onSubmit={handlePayment} className="space-y-4 py-4 text-right">
                     <div className="space-y-2">
-                      <Label>اختر الحساب</Label>
-                      <Select name="accountId" required>
-                        <SelectTrigger className="text-right">
-                          <SelectValue placeholder="اختر الحساب المستهدف" />
-                        </SelectTrigger>
+                      <Label>المورد</Label>
+                      <Select name="supplierId" required>
+                        <SelectTrigger className="text-right"><SelectValue placeholder="اختر المورد" /></SelectTrigger>
                         <SelectContent dir="rtl">
-                          {debtAccounts.map(a => (
-                            <SelectItem key={a.id} value={a.id}>{a.name} ({a.type === 'SUPPLIER' ? 'مورد' : 'عميل'})</SelectItem>
-                          ))}
+                          {suppliers.map(s => <SelectItem key={s.id} value={s.id}>{s.name} (الدين: {s.balance} $)</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="space-y-2">
-                      <Label>المبلغ المدفوع / المستلم</Label>
-                      <Input name="amount" type="number" step="0.01" required placeholder="0.00" className="text-right" />
+                      <Label>مبلغ السداد</Label>
+                      <Input name="amount" type="number" step="0.01" required className="text-right" />
                     </div>
                     <div className="space-y-2">
-                      <Label>ملاحظات / رقم الإيصال</Label>
-                      <Input name="note" placeholder="ملاحظة اختيارية" className="text-right" />
+                      <Label>طريقة الدفع</Label>
+                      <Select name="method" defaultValue="CASH">
+                        <SelectTrigger className="text-right"><SelectValue /></SelectTrigger>
+                        <SelectContent dir="rtl">
+                          <SelectItem value="CASH">نقدي</SelectItem>
+                          <SelectItem value="TRANSFER">تحويل بنكي</SelectItem>
+                          <SelectItem value="CHECK">شيك</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
-                    <DialogFooter>
-                      <Button type="submit" className="w-full bg-[#336699] font-bold">حفظ المعاملة المالية</Button>
-                    </DialogFooter>
+                    <div className="space-y-2">
+                      <Label>ملاحظات</Label>
+                      <Input name="note" className="text-right" />
+                    </div>
+                    <DialogFooter><Button type="submit" className="w-full bg-[#336699]">تأكيد السداد</Button></DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
 
-              <Dialog open={isAccDialogOpen} onOpenChange={setIsAccDialogOpen}>
+              <Dialog open={isSupDialogOpen} onOpenChange={setIsSupDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-[#336699] hover:bg-[#2a5580] font-bold">
-                    <Plus className="h-4 w-4 ml-2" /> حساب جديد
-                  </Button>
+                  <Button className="bg-[#336699] font-bold"><Plus className="ml-2 h-4 w-4" /> مورد جديد</Button>
                 </DialogTrigger>
                 <DialogContent dir="rtl">
-                  <DialogHeader>
-                    <DialogTitle className="text-right">إضافة حساب مالي جديد</DialogTitle>
-                  </DialogHeader>
-                  <form onSubmit={handleCreateAccount} className="space-y-4 py-4 text-right">
-                    <div className="space-y-2">
-                      <Label>اسم الحساب</Label>
-                      <Input name="name" required placeholder="اسم الشركة أو الشخص" className="text-right" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>نوع الحساب</Label>
-                      <Select name="type" defaultValue="SUPPLIER">
-                        <SelectTrigger className="text-right">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent dir="rtl">
-                          <SelectItem value="SUPPLIER">مورد (نحن ندفع له)</SelectItem>
-                          <SelectItem value="CUSTOMER">عميل (هو يدفع لنا)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>رقم الهاتف</Label>
-                      <Input name="phone" placeholder="بيانات الاتصال" className="text-right" />
-                    </div>
-                    <DialogFooter>
-                      <Button type="submit" className="w-full bg-[#336699] font-bold">إنشاء الحساب</Button>
-                    </DialogFooter>
+                  <DialogHeader><DialogTitle className="text-right">إضافة مورد جديد</DialogTitle></DialogHeader>
+                  <form onSubmit={handleCreateSupplier} className="space-y-4 py-4 text-right">
+                    <div className="space-y-2"><Label>اسم المورد</Label><Input name="name" required className="text-right" /></div>
+                    <div className="space-y-2"><Label>رقم الهاتف</Label><Input name="phone" className="text-right" /></div>
+                    <div className="space-y-2"><Label>العنوان</Label><Input name="address" className="text-right" /></div>
+                    <DialogFooter><Button type="submit" className="w-full bg-[#336699]">حفظ المورد</Button></DialogFooter>
                   </form>
                 </DialogContent>
               </Dialog>
@@ -156,49 +132,42 @@ export default function AccountsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="suppliers" className="w-full">
-        <TabsList className="bg-white/50 border mb-4 w-full justify-start p-1 h-12">
-          <TabsTrigger value="suppliers" className="flex-1 font-bold">الموردين</TabsTrigger>
-          <TabsTrigger value="customers" className="flex-1 font-bold">العملاء</TabsTrigger>
-          <TabsTrigger value="history" className="flex-1 font-bold">سجل السدادات</TabsTrigger>
+      <Tabs defaultValue="list" className="w-full">
+        <TabsList className="bg-white/50 border mb-4 w-full justify-start h-12">
+          <TabsTrigger value="list" className="flex-1 font-bold">قائمة الموردين</TabsTrigger>
+          <TabsTrigger value="payments" className="flex-1 font-bold">سجل السدادات</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="suppliers">
+        <TabsContent value="list">
           <Card className="border-none shadow-sm overflow-hidden">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
-                    <TableHead className="text-right">اسم المورد</TableHead>
-                    <TableHead className="text-right">الهاتف</TableHead>
-                    <TableHead className="text-left">إجمالي الدين لنا عليه</TableHead>
-                    <TableHead className="text-center">الحالة</TableHead>
-                    {isAdmin() && <TableHead className="text-center">خيارات</TableHead>}
+                    <TableHead className="text-right">المورد</TableHead>
+                    <TableHead className="text-right">الاتصال</TableHead>
+                    <TableHead className="text-right">إجمالي المشتريات</TableHead>
+                    <TableHead className="text-right">إجمالي المدفوعات</TableHead>
+                    <TableHead className="text-left text-red-600">المديونية المتبقية</TableHead>
+                    {isAdmin() && <TableHead className="text-center">إجراء</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {debtAccounts.filter(a => a.type === 'SUPPLIER').map(acc => (
-                    <TableRow key={acc.id}>
-                      <TableCell className="font-bold text-right">{acc.name}</TableCell>
-                      <TableCell className="text-right flex items-center gap-2 justify-end">
-                        {acc.phone || '-'}
-                        <Phone className="h-3 w-3 text-muted-foreground" />
+                  {suppliers.map(s => (
+                    <TableRow key={s.id}>
+                      <TableCell className="font-bold text-right">{s.name}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex flex-col">
+                          <span className="flex items-center gap-1 justify-end text-xs"><Phone className="h-3 w-3" /> {s.phone || '-'}</span>
+                          <span className="flex items-center gap-1 justify-end text-[10px] text-muted-foreground"><MapPin className="h-3 w-3" /> {s.address || '-'}</span>
+                        </div>
                       </TableCell>
-                      <TableCell className="text-left font-mono text-lg font-black text-red-600">
-                        {acc.balance.toLocaleString()} $
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {acc.balance > 0 ? (
-                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-red-100 text-red-700">مستحق الدفع</span>
-                        ) : (
-                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">مسدد بالكامل</span>
-                        )}
-                      </TableCell>
+                      <TableCell className="text-right font-mono font-bold">{s.totalPurchases.toLocaleString()} $</TableCell>
+                      <TableCell className="text-right font-mono font-bold text-emerald-600">{s.totalPayments.toLocaleString()} $</TableCell>
+                      <TableCell className="text-left font-mono text-lg font-black text-red-600">{s.balance.toLocaleString()} $</TableCell>
                       {isAdmin() && (
                         <TableCell className="text-center">
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteDebtAccount(acc.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteSupplier(s.id)}><Trash2 className="h-4 w-4" /></Button>
                         </TableCell>
                       )}
                     </TableRow>
@@ -209,98 +178,32 @@ export default function AccountsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="customers">
-          <Card className="border-none shadow-sm overflow-hidden">
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-slate-50">
-                    <TableHead className="text-right">اسم العميل</TableHead>
-                    <TableHead className="text-right">الهاتف</TableHead>
-                    <TableHead className="text-left">رصيد المستحقات</TableHead>
-                    <TableHead className="text-center">الحالة</TableHead>
-                    {isAdmin() && <TableHead className="text-center">خيارات</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {debtAccounts.filter(a => a.type === 'CUSTOMER').map(acc => (
-                    <TableRow key={acc.id}>
-                      <TableCell className="font-bold text-right">{acc.name}</TableCell>
-                      <TableCell className="text-right flex items-center gap-2 justify-end">
-                        {acc.phone || '-'}
-                        <Phone className="h-3 w-3 text-muted-foreground" />
-                      </TableCell>
-                      <TableCell className="text-left font-mono text-lg font-black text-blue-600">
-                        {Math.abs(acc.balance).toLocaleString()} $
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {acc.balance < 0 ? (
-                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-blue-100 text-blue-700">ذمة نشطة</span>
-                        ) : (
-                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">خالص</span>
-                        )}
-                      </TableCell>
-                      {isAdmin() && (
-                        <TableCell className="text-center">
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteDebtAccount(acc.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history">
+        <TabsContent value="payments">
           <Card className="border-none shadow-sm overflow-hidden">
             <CardContent className="p-0">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50">
                     <TableHead className="text-right">التاريخ</TableHead>
-                    <TableHead className="text-right">الحساب</TableHead>
-                    <TableHead className="text-right">نوع العملية</TableHead>
-                    <TableHead className="text-left">المبلغ</TableHead>
+                    <TableHead className="text-right">المورد</TableHead>
+                    <TableHead className="text-right">طريقة الدفع</TableHead>
+                    <TableHead className="text-left">المبلغ المسدد</TableHead>
                     <TableHead className="text-right">ملاحظات</TableHead>
-                    {isAdmin() && <TableHead className="text-left">حذف</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {repayments.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={isAdmin() ? 6 : 5} className="text-center py-12 text-muted-foreground italic">لا يوجد سجل مدفوعات حتى الآن</TableCell>
-                    </TableRow>
-                  ) : (
-                    repayments.map(rep => {
-                      const acc = debtAccounts.find(a => a.id === rep.debtAccountId);
-                      return (
-                        <TableRow key={rep.id}>
-                          <TableCell className="text-xs text-right font-bold">{new Date(rep.timestamp).toLocaleDateString('ar-EG')}</TableCell>
-                          <TableCell className="font-bold text-right">{acc?.name}</TableCell>
-                          <TableCell className="text-right">
-                            {rep.type === 'PAYMENT' ? (
-                              <span className="text-red-600 flex items-center gap-1 text-xs font-black uppercase justify-end">سداد خارج <TrendingDown className="h-3 w-3"/></span>
-                            ) : (
-                              <span className="text-emerald-600 flex items-center gap-1 text-xs font-black uppercase justify-end">استلام داخل <TrendingUp className="h-3 w-3"/></span>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-left font-mono font-black text-[#336699]">{rep.amount.toLocaleString()} $</TableCell>
-                          <TableCell className="text-xs italic text-muted-foreground text-right">{rep.note || '-'}</TableCell>
-                          {isAdmin() && (
-                            <TableCell className="text-left">
-                              <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteRepayment(rep.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      );
-                    })
-                  )}
+                  {payments.map(p => {
+                    const s = suppliers.find(x => x.id === p.supplierId);
+                    return (
+                      <TableRow key={p.id}>
+                        <TableCell className="text-xs text-right font-bold">{new Date(p.date).toLocaleDateString('ar-EG')}</TableCell>
+                        <TableCell className="font-bold text-right">{s?.name}</TableCell>
+                        <TableCell className="text-right"><span className="text-xs bg-slate-100 px-2 py-1 rounded-full font-bold">{p.method}</span></TableCell>
+                        <TableCell className="text-left font-mono font-black text-emerald-600">{p.amount.toLocaleString()} $</TableCell>
+                        <TableCell className="text-right text-xs italic text-muted-foreground">{p.note || '-'}</TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
