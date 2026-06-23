@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight, Search, Clock, User, Trash2 } from 'lucide-react';
+import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight, Search, Clock, User, Trash2, Calendar as CalendarIcon, X } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -33,6 +33,7 @@ export default function MovementsPage() {
   const [quantity, setQuantity] = useState(1);
   const [debtAccountId, setDebtAccountId] = useState('');
   const [historySearch, setHistorySearch] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
 
   const handleRecord = (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,15 +62,22 @@ export default function MovementsPage() {
 
   const filteredMovements = movements.filter(m => {
     const item = items.find(i => i.id === m.itemId);
-    return item?.name.toLowerCase().includes(historySearch.toLowerCase()) || 
-           item?.code.toLowerCase().includes(historySearch.toLowerCase());
+    const movementDate = new Date(m.timestamp).toISOString().split('T')[0];
+    
+    const matchesSearch = 
+      item?.name.toLowerCase().includes(historySearch.toLowerCase()) || 
+      item?.code.toLowerCase().includes(historySearch.toLowerCase());
+      
+    const matchesDate = !dateFilter || movementDate === dateFilter;
+
+    return matchesSearch && matchesDate;
   });
 
   return (
     <div className="space-y-8 text-right">
       <div>
         <h1 className="text-3xl font-bold text-[#336699]">حركات المخزن</h1>
-        <p className="text-muted-foreground font-medium">تسجيل عمليات التوريد والصرف</p>
+        <p className="text-muted-foreground font-medium">تسجيل عمليات التوريد والصرف ومراجعة السجل التاريخي</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -158,16 +166,35 @@ export default function MovementsPage() {
         </Card>
 
         <Card className="lg:col-span-2 border-none shadow-sm">
-          <CardHeader className="flex flex-row-reverse items-center justify-between">
-            <CardTitle className="text-lg">سجل الحركات</CardTitle>
-            <div className="relative w-64">
-              <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input 
-                placeholder="تصفية السجل..." 
-                className="pr-9 h-9 text-right" 
-                value={historySearch}
-                onChange={(e) => setHistorySearch(e.target.value)}
-              />
+          <CardHeader className="flex flex-col md:flex-row-reverse items-center justify-between gap-4">
+            <CardTitle className="text-lg">سجل الحركات التاريخي</CardTitle>
+            <div className="flex flex-wrap items-center gap-2 justify-end w-full md:w-auto">
+              <div className="relative w-full md:w-64">
+                <Search className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input 
+                  placeholder="ابحث بالاسم أو الكود..." 
+                  className="pr-9 h-9 text-right" 
+                  value={historySearch}
+                  onChange={(e) => setHistorySearch(e.target.value)}
+                />
+              </div>
+              <div className="relative w-full md:w-44">
+                <CalendarIcon className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input 
+                  type="date"
+                  className="pr-9 h-9 text-right block w-full"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                />
+                {dateFilter && (
+                  <button 
+                    onClick={() => setDateFilter('')}
+                    className="absolute left-2 top-2.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -186,7 +213,7 @@ export default function MovementsPage() {
                 {filteredMovements.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={isAdmin() ? 6 : 5} className="text-center py-12 text-muted-foreground italic">
-                      لا توجد سجلات مطابقة
+                      لا توجد سجلات مطابقة للمعايير المحددة
                     </TableCell>
                   </TableRow>
                 ) : (
