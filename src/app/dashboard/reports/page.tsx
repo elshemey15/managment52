@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell 
 } from 'recharts';
-import { ShieldCheck, TrendingDown, TrendingUp, Wallet, Package } from 'lucide-react';
+import { ShieldCheck, TrendingDown, TrendingUp, Wallet, Package, ShoppingCart, DollarSign } from 'lucide-react';
 
 export default function ReportsPage() {
   const { items, suppliers, purchases, payments, expenses, isAdmin } = useWarehouse();
@@ -25,10 +25,9 @@ export default function ReportsPage() {
   // المحاسبة المالية
   const totalSupplierDebt = suppliers.reduce((acc, s) => acc + s.balance, 0);
   const totalExpenses = expenses.reduce((acc, exp) => acc + exp.amount, 0);
-  const inventoryValue = items.reduce((acc, i) => acc + (i.currentStock * i.purchasePrice), 0);
+  const inventoryValue = items.reduce((acc, i) => acc + (i.currentStock * (i.purchasePrice || 0)), 0);
   const paidInventoryValue = Math.max(0, inventoryValue - totalSupplierDebt);
-  const unpaidInventoryValue = totalSupplierDebt;
-  const totalPayments = payments.reduce((acc, p) => acc + p.amount, 0);
+  const totalInvoices = purchases.length;
 
   // إحصائيات المشتريات لآخر 7 أيام
   const last7Days = Array.from({ length: 7 }, (_, i) => {
@@ -46,9 +45,18 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-8 text-right">
-      <div>
-        <h1 className="text-3xl font-bold text-[#336699]">التقارير المالية والتحليلية</h1>
-        <p className="text-muted-foreground font-medium">نظرة شاملة على الأصول، الديون، والتدفقات النقدية للموردين</p>
+      <div className="flex justify-between items-center flex-row-reverse">
+        <div>
+          <h1 className="text-3xl font-bold text-[#336699]">التقارير المالية والتحليلية</h1>
+          <p className="text-muted-foreground font-medium">نظرة شاملة على الأصول، الديون، والتدفقات النقدية للموردين</p>
+        </div>
+        <div className="bg-slate-100 px-6 py-3 rounded-2xl border flex items-center gap-4">
+           <div className="text-right">
+             <p className="text-[10px] font-bold text-muted-foreground">إجمالي الفواتير المسجلة</p>
+             <p className="text-xl font-black text-[#336699]">{totalInvoices} فاتورة</p>
+           </div>
+           <ShoppingCart className="h-8 w-8 text-[#336699] opacity-20" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -57,7 +65,7 @@ export default function ReportsPage() {
             <div className="flex justify-between items-start flex-row-reverse">
               <Package className="h-5 w-5 opacity-50" />
               <div className="text-right">
-                <p className="text-xs font-bold opacity-80 mb-1">إجمالي قيمة المخزن</p>
+                <p className="text-xs font-bold opacity-80 mb-1">إجمالي قيمة الأصول (المخزن)</p>
                 <h3 className="text-2xl font-black">{inventoryValue.toLocaleString()} $</h3>
               </div>
             </div>
@@ -66,9 +74,9 @@ export default function ReportsPage() {
         <Card className="bg-emerald-600 text-white">
           <CardContent className="p-6">
             <div className="flex justify-between items-start flex-row-reverse">
-              <TrendingUp className="h-5 w-5 opacity-50" />
+              <DollarSign className="h-5 w-5 opacity-50" />
               <div className="text-right">
-                <p className="text-xs font-bold opacity-80 mb-1">المخزن المدفوع</p>
+                <p className="text-xs font-bold opacity-80 mb-1">صافي قيمة الأصول (المدفوعة)</p>
                 <h3 className="text-2xl font-black">{paidInventoryValue.toLocaleString()} $</h3>
               </div>
             </div>
@@ -79,7 +87,7 @@ export default function ReportsPage() {
             <div className="flex justify-between items-start flex-row-reverse">
               <TrendingDown className="h-5 w-5 opacity-50" />
               <div className="text-right">
-                <p className="text-xs font-bold opacity-80 mb-1">ديون الموردين</p>
+                <p className="text-xs font-bold opacity-80 mb-1">إجمالي مديونية الموردين</p>
                 <h3 className="text-2xl font-black">{totalSupplierDebt.toLocaleString()} $</h3>
               </div>
             </div>
@@ -90,7 +98,7 @@ export default function ReportsPage() {
             <div className="flex justify-between items-start flex-row-reverse">
               <Wallet className="h-5 w-5 opacity-50" />
               <div className="text-right">
-                <p className="text-xs font-bold opacity-80 mb-1">إجمالي المصاريف</p>
+                <p className="text-xs font-bold opacity-80 mb-1">إجمالي المصاريف التشغيلية</p>
                 <h3 className="text-2xl font-black">{totalExpenses.toLocaleString()} $</h3>
               </div>
             </div>
@@ -130,8 +138,8 @@ export default function ReportsPage() {
                 <PieChart>
                   <Pie
                     data={[
-                      { name: 'مخزن مدفوع', value: paidInventoryValue },
-                      { name: 'ديون موردين', value: unpaidInventoryValue }
+                      { name: 'أصول مدفوعة بالكامل', value: paidInventoryValue },
+                      { name: 'أصول بضمان ديون', value: totalSupplierDebt }
                     ]}
                     cx="50%"
                     cy="50%"
