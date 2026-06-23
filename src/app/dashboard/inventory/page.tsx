@@ -98,7 +98,7 @@ export default function InventoryPage() {
     }
 
     const supplier = suppliers.find(s => s.id === selectedSupplierId);
-    const totalVal = activeItem.purchasePrice * movementQty;
+    const totalVal = (activeItem?.purchasePrice || 0) * movementQty;
 
     addPurchase({
       supplierId: selectedSupplierId,
@@ -117,7 +117,7 @@ export default function InventoryPage() {
     setSelectedSupplierId('');
   };
 
-  const totalValue = activeItem ? activeItem.purchasePrice * movementQty : 0;
+  const totalValue = activeItem ? (activeItem.purchasePrice || 0) * movementQty : 0;
   const remainingDebt = totalValue - paidNow;
 
   return (
@@ -182,7 +182,7 @@ export default function InventoryPage() {
                     name="name"
                     defaultValue={editingItem?.name}
                     required 
-                    placeholder="مثال: بطيخ أحمر كبير" 
+                    placeholder="مثال: صنف جديد" 
                     className="text-right" 
                   />
                 </div>
@@ -190,11 +190,11 @@ export default function InventoryPage() {
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="purchasePrice">سعر الشراء</Label>
-                    <Input id="purchasePrice" name="purchasePrice" type="number" step="any" defaultValue={editingItem?.purchasePrice} required className="text-right" />
+                    <Input id="purchasePrice" name="purchasePrice" type="number" step="any" defaultValue={editingItem?.purchasePrice} placeholder="0.00" className="text-right" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="salePrice">سعر البيع (اختياري)</Label>
-                    <Input id="salePrice" name="salePrice" type="number" step="any" defaultValue={editingItem?.salePrice} className="text-right" />
+                    <Label htmlFor="salePrice">سعر البيع</Label>
+                    <Input id="salePrice" name="salePrice" type="number" step="any" defaultValue={editingItem?.salePrice} placeholder="0.00" className="text-right" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="currentStock">المخزون الحالي</Label>
@@ -333,7 +333,7 @@ export default function InventoryPage() {
                 <div className="flex justify-between mt-2 text-xs font-bold text-muted-foreground">
                   <span>الكود: {activeItem.code}</span>
                   <span>المتوفر: {activeItem.currentStock.toLocaleString()}</span>
-                  <span>سعر الشراء: {activeItem.purchasePrice} $</span>
+                  <span>سعر الشراء: {activeItem.purchasePrice || 0} $</span>
                 </div>
               </div>
               

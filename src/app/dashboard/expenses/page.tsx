@@ -25,7 +25,7 @@ export default function ExpensesPage() {
     const formData = new FormData(e.currentTarget);
     addExpense({
       description: formData.get('description') as string,
-      amount: parseFloat(formData.get('amount') as string),
+      amount: parseFloat(formData.get('amount') as string || '0'),
       category: formData.get('category') as string,
     });
     e.currentTarget.reset();
@@ -59,7 +59,7 @@ export default function ExpensesPage() {
               </div>
               <div className="space-y-2">
                 <Label>المبلغ</Label>
-                <Input name="amount" type="number" step="0.01" required placeholder="0.00" className="text-right" />
+                <Input name="amount" type="number" step="0.01" placeholder="0.00" className="text-right" />
               </div>
               <div className="space-y-2">
                 <Label>تصنيف المصروف</Label>

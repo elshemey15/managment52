@@ -38,10 +38,15 @@ export default function PurchasesPage() {
 
   const updateInvoiceItem = (index: number, field: string, value: any) => {
     const newItems = [...invoiceItems];
-    (newItems[index] as any)[field] = value;
+    if (field === 'price' || field === 'qty') {
+      (newItems[index] as any)[field] = isNaN(parseFloat(value)) ? 0 : parseFloat(value);
+    } else {
+      (newItems[index] as any)[field] = value;
+    }
+    
     if (field === 'itemId') {
       const item = items.find(i => i.id === value);
-      if (item) newItems[index].price = item.purchasePrice;
+      if (item) newItems[index].price = item.purchasePrice || 0;
     }
     setInvoiceItems(newItems);
   };
@@ -126,8 +131,8 @@ export default function PurchasesPage() {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell><Input type="number" step="any" value={item.qty} onChange={(e) => updateInvoiceItem(idx, 'qty', parseFloat(e.target.value))} className="text-center" /></TableCell>
-                      <TableCell><Input type="number" step="any" value={item.price} onChange={(e) => updateInvoiceItem(idx, 'price', parseFloat(e.target.value))} className="text-center" /></TableCell>
+                      <TableCell><Input type="number" step="any" value={item.qty} onChange={(e) => updateInvoiceItem(idx, 'qty', e.target.value)} className="text-center" /></TableCell>
+                      <TableCell><Input type="number" step="any" value={item.price} onChange={(e) => updateInvoiceItem(idx, 'price', e.target.value)} className="text-center" /></TableCell>
                       <TableCell className="text-left font-mono font-bold">{(item.qty * item.price).toLocaleString()} $</TableCell>
                       <TableCell><Button variant="ghost" size="icon" onClick={() => removeItem(idx)} className="text-destructive"><Trash2 className="h-4 w-4" /></Button></TableCell>
                     </TableRow>
@@ -145,7 +150,7 @@ export default function PurchasesPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>المبلغ المدفوع الآن (نقدي)</Label>
-                  <Input type="number" step="0.01" value={paidAmount} onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)} className="text-right h-12 text-lg font-bold" />
+                  <Input type="number" step="0.01" value={paidAmount} onChange={(e) => setPaidAmount(parseFloat(e.target.value) || 0)} placeholder="0.00" className="text-right h-12 text-lg font-bold" />
                 </div>
                 <div className="flex justify-between items-center flex-row-reverse border-t pt-4">
                   <span className="font-bold text-red-600">المتبقي (مديونية):</span>
