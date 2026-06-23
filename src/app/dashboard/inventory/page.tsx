@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Package, ArrowDownLeft, ArrowUpRight, FolderOpen, CreditCard } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, ArrowDownLeft, ArrowUpRight, FolderOpen, CreditCard, Wallet, CheckCircle2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -42,7 +42,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 export default function InventoryPage() {
-  const { items, departments, units, suppliers, addItem, updateItem, deleteItem, addPurchase, canEdit, isAdmin } = useWarehouse();
+  const { items, departments, units, suppliers, purchases, addItem, updateItem, deleteItem, addPurchase, canEdit, isAdmin } = useWarehouse();
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
@@ -115,6 +115,17 @@ export default function InventoryPage() {
     setMovementQty(1);
     setPaidNow(0);
     setSelectedSupplierId('');
+  };
+
+  const getItemFinancialStatus = (itemId: string) => {
+    const itemPurchases = purchases.filter(p => 
+      p.items?.some((i: any) => i.itemId === itemId)
+    );
+    
+    if (itemPurchases.length === 0) return 'INITIAL'; // رصيد افتتاحى
+
+    const hasUnpaid = itemPurchases.some(p => p.status !== 'PAID');
+    return hasUnpaid ? 'DEBT' : 'PAID';
   };
 
   const totalValue = activeItem ? (activeItem.purchasePrice || 0) * movementQty : 0;
@@ -248,20 +259,22 @@ export default function InventoryPage() {
                       <TableHead className="text-right">اسم المادة</TableHead>
                       <TableHead className="text-center">الكمية</TableHead>
                       <TableHead className="text-center">تسجيل حركة</TableHead>
-                      <TableHead className="text-center">الحالة</TableHead>
+                      <TableHead className="text-center">الحالة المالية</TableHead>
+                      <TableHead className="text-center">التوفر</TableHead>
                       <TableHead className="w-[100px] text-center">خيارات</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {deptItems.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="h-24 text-center text-muted-foreground italic">
+                        <TableCell colSpan={7} className="h-24 text-center text-muted-foreground italic">
                           لا توجد مواد في هذا القسم حالياً
                         </TableCell>
                       </TableRow>
                     ) : (
                       deptItems.map((item) => {
                         const unit = units.find(u => u.id === item.unitId);
+                        const financialStatus = getItemFinancialStatus(item.id);
                         return (
                           <TableRow key={item.id} className="hover:bg-slate-50/30">
                             <TableCell className="font-mono text-xs font-bold text-right text-[#336699]">{item.code}</TableCell>
@@ -286,6 +299,19 @@ export default function InventoryPage() {
                                   <ArrowDownLeft className="h-3 w-3 ml-1" /> وارد (توريد)
                                 </Button>
                               </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {financialStatus === 'DEBT' ? (
+                                <Badge variant="outline" className="border-red-600 text-red-600 bg-red-50 flex items-center justify-center gap-1 font-bold">
+                                  <Wallet className="h-3 w-3" /> مديونة
+                                </Badge>
+                              ) : financialStatus === 'PAID' ? (
+                                <Badge variant="outline" className="border-emerald-600 text-emerald-600 bg-emerald-50 flex items-center justify-center gap-1 font-bold">
+                                  <CheckCircle2 className="h-3 w-3" /> مسددة
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="text-muted-foreground font-bold">رصيد افتتاحى</Badge>
+                              )}
                             </TableCell>
                             <TableCell className="text-center">
                               {item.currentStock < 10 ? (
