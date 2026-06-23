@@ -1,0 +1,95 @@
+
+"use client";
+
+import React, { useState } from 'react';
+import { useWarehouse } from '@/app/lib/store';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Tags, Plus, Trash2 } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+export default function CategoriesPage() {
+  const { categories, addCategory, items, canEdit, isAdmin } = useWarehouse();
+  const [newCatName, setNewCatName] = useState('');
+
+  const handleAdd = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCatName) return;
+    addCategory({ name: newCatName });
+    setNewCatName('');
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-[#336699]">Product Categories</h1>
+        <p className="text-muted-foreground">Organize your inventory into departments</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <Card className="md:col-span-1 border-none shadow-sm h-fit">
+          <CardHeader>
+            <CardTitle className="text-lg">New Category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleAdd} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="catname">Category Name</Label>
+                <Input 
+                  id="catname" 
+                  placeholder="e.g. Spare Parts" 
+                  value={newCatName} 
+                  onChange={(e) => setNewCatName(e.target.value)}
+                  disabled={!canEdit()}
+                />
+              </div>
+              <Button type="submit" className="w-full bg-[#336699]" disabled={!canEdit()}>
+                <Plus className="h-4 w-4 mr-2" /> Add Category
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <Card className="md:col-span-2 border-none shadow-sm overflow-hidden">
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50">
+                  <TableHead>Category Name</TableHead>
+                  <TableHead className="text-center">Items Count</TableHead>
+                  {isAdmin() && <TableHead className="text-right">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories.map((cat) => (
+                  <TableRow key={cat.id}>
+                    <TableCell className="font-semibold">{cat.name}</TableCell>
+                    <TableCell className="text-center">
+                      {items.filter(i => i.categoryId === cat.id).length}
+                    </TableCell>
+                    {isAdmin() && (
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" className="text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

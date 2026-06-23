@@ -1,0 +1,17 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "warehouse-hero",
+      "description": "Modern warehouse interior with organized shelves",
+      "imageUrl": "https://picsum.photos/seed/wh1/1200/600",
+      "imageHint": "warehouse storage"
+    },
+    {
+      "id": "inventory-items",
+      "description": "Inventory management items and boxes",
+      "imageUrl": "https://picsum.photos/seed/inv1/600/400",
+      "imageHint": "inventory management"
+    }
+  ]
+}
