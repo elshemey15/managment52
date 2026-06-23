@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Edit2, Trash2, Package, ArrowDownLeft, ArrowUpRight, FolderOpen, Layers } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Package, ArrowDownLeft, ArrowUpRight, FolderOpen, Layers, CreditCard } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -50,6 +50,7 @@ export default function InventoryPage() {
   const [activeItem, setActiveItem] = useState<any>(null);
   const [movementType, setMovementType] = useState<'IN' | 'OUT'>('IN');
   const [movementQty, setMovementQty] = useState<number>(1);
+  const [paidNow, setPaidNow] = useState<number>(0);
 
   const [dialogDeptId, setDialogDeptId] = useState<string>('');
   const [dialogUnitId, setDialogUnitId] = useState<string>('');
@@ -105,13 +106,18 @@ export default function InventoryPage() {
       type: movementType,
       quantity: qty,
       priceAtTime: movementType === 'IN' ? activeItem.purchasePrice : activeItem.salePrice,
-      debtAccountId: debtAccId === 'none' ? undefined : debtAccId
+      debtAccountId: debtAccId === 'none' ? undefined : debtAccId,
+      paidAmount: paidNow
     });
 
     setIsMovementDialogOpen(false);
     setActiveItem(null);
     setMovementQty(1);
+    setPaidNow(0);
   };
+
+  const totalValue = activeItem ? (movementType === 'IN' ? activeItem.purchasePrice : activeItem.salePrice) * movementQty : 0;
+  const remainingDebt = totalValue - paidNow;
 
   return (
     <div className="space-y-6 text-right">
@@ -273,6 +279,7 @@ export default function InventoryPage() {
                                     setActiveItem(item);
                                     setMovementType('IN');
                                     setMovementQty(1);
+                                    setPaidNow(0);
                                     setIsMovementDialogOpen(true);
                                   }}
                                 >
@@ -286,6 +293,7 @@ export default function InventoryPage() {
                                     setActiveItem(item);
                                     setMovementType('OUT');
                                     setMovementQty(1);
+                                    setPaidNow(0);
                                     setIsMovementDialogOpen(true);
                                   }}
                                 >
@@ -328,25 +336,29 @@ export default function InventoryPage() {
       </Accordion>
 
       <Dialog open={isMovementDialogOpen} onOpenChange={setIsMovementDialogOpen}>
-        <DialogContent dir="rtl" className="text-right">
+        <DialogContent dir="rtl" className="text-right sm:max-w-[500px]">
           <DialogHeader>
             <DialogTitle>تسجيل {movementType === 'IN' ? 'وارد (توريد)' : 'صادر (صرف)'} للمادة</DialogTitle>
           </DialogHeader>
           {activeItem && (
             <form onSubmit={handleMovementSubmit} className="space-y-6 py-4">
-              <div className="bg-slate-50 p-3 rounded-lg border">
-                <p className="text-sm font-bold">{activeItem.name}</p>
-                <p className="text-xs text-muted-foreground">الكود: {activeItem.code} | المتوفر: {activeItem.currentStock.toLocaleString()}</p>
+              <div className="bg-slate-50 p-4 rounded-lg border">
+                <p className="text-sm font-bold text-[#336699]">{activeItem.name}</p>
+                <div className="flex justify-between mt-2 text-xs font-bold text-muted-foreground">
+                  <span>الكود: {activeItem.code}</span>
+                  <span>المتوفر: {activeItem.currentStock.toLocaleString()}</span>
+                  <span>سعر {movementType === 'IN' ? 'الشراء' : 'البيع'}: {movementType === 'IN' ? activeItem.purchasePrice : activeItem.salePrice} $</span>
+                </div>
               </div>
               
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Label>الكمية (أرقام أو كسور)</Label>
-                  <span className="text-xs font-black bg-blue-50 text-blue-700 px-2 py-1 rounded">{movementQty}</span>
+                  <Label>الكمية المطلوبة</Label>
+                  <span className="text-xs font-black bg-blue-50 text-blue-700 px-3 py-1 rounded-full">{movementQty}</span>
                 </div>
                 
                 <Slider 
-                  defaultValue={[1]} 
+                  value={[movementQty]} 
                   max={movementType === 'OUT' ? activeItem.currentStock : 100} 
                   step={0.1}
                   className="py-4"
@@ -359,31 +371,57 @@ export default function InventoryPage() {
                   step="any"
                   min="0.1" 
                   required 
-                  className="text-right" 
+                  className="text-right h-11" 
                   value={movementQty}
                   onChange={(e) => setMovementQty(parseFloat(e.target.value) || 0)}
                 />
               </div>
 
-              <div className="space-y-2">
-                <Label>ربط بحساب (دين / ذمة)</Label>
-                <Select name="debtAccountId" defaultValue="none">
-                  <SelectTrigger className="text-right">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent dir="rtl">
-                    <SelectItem value="none">بدون ربط (نقدي)</SelectItem>
-                    {debtAccounts
-                      .filter(a => a.type === (movementType === 'IN' ? 'SUPPLIER' : 'CUSTOMER'))
-                      .map(acc => (
-                        <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-4 p-4 bg-slate-50/50 rounded-xl border border-dashed">
+                <div className="space-y-2">
+                  <Label>ربط بحساب (مورد / عميل)</Label>
+                  <Select name="debtAccountId" defaultValue="none">
+                    <SelectTrigger className="text-right h-11">
+                      <SelectValue placeholder="اختر الحساب (اختياري)" />
+                    </SelectTrigger>
+                    <SelectContent dir="rtl">
+                      <SelectItem value="none">بدون ربط (نقدي بالكامل)</SelectItem>
+                      {debtAccounts
+                        .filter(a => a.type === (movementType === 'IN' ? 'SUPPLIER' : 'CUSTOMER'))
+                        .map(acc => (
+                          <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>المبلغ المدفوع الآن</Label>
+                    <div className="relative">
+                      <CreditCard className="absolute right-3 top-3 h-4 w-4 text-muted-foreground" />
+                      <Input 
+                        type="number" 
+                        step="0.01" 
+                        className="text-right pr-10 h-11" 
+                        value={paidNow}
+                        onChange={(e) => setPaidNow(parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex flex-col justify-end text-left">
+                    <p className="text-[10px] text-muted-foreground font-bold mb-1">إجمالي الفاتورة: {totalValue.toLocaleString()} $</p>
+                    <p className={`text-sm font-black ${remainingDebt > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                      {remainingDebt > 0 ? `المتبقي (دين): ${remainingDebt.toLocaleString()} $` : 'تم الدفع بالكامل'}
+                    </p>
+                  </div>
+                </div>
               </div>
+
               <DialogFooter>
-                <Button type="submit" className={`w-full font-bold h-12 text-lg ${movementType === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'}`}>
-                  تأكيد العملية
+                <Button type="submit" className={`w-full font-bold h-12 text-lg shadow-lg ${movementType === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'}`}>
+                  تأكيد وحفظ العملية
                 </Button>
               </DialogFooter>
             </form>

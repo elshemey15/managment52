@@ -5,6 +5,10 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Item, Movement, DebtAccount, Expense, Repayment, Department, Unit } from './types';
 import { toast } from '@/hooks/use-toast';
 
+interface MovementWithPayment extends Omit<Movement, 'id' | 'timestamp' | 'userId'> {
+  paidAmount?: number;
+}
+
 interface WarehouseContextType {
   currentUser: User | null;
   users: User[];
@@ -25,7 +29,7 @@ interface WarehouseContextType {
   addItem: (item: Omit<Item, 'id' | 'code'>) => void;
   updateItem: (id: string, item: Partial<Item>) => void;
   deleteItem: (id: string) => void;
-  addMovement: (movement: Omit<Movement, 'id' | 'timestamp' | 'userId'>) => void;
+  addMovement: (movement: MovementWithPayment) => void;
   deleteMovement: (id: string) => void;
   addDebtAccount: (account: Omit<DebtAccount, 'id' | 'balance'>) => void;
   deleteDebtAccount: (id: string) => void;
@@ -148,8 +152,10 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toast({ title: 'تم حذف المادة بنجاح' });
   };
 
-  const addMovement = (move: Omit<Movement, 'id' | 'timestamp' | 'userId'>) => {
+  const addMovement = (moveWithPayment: MovementWithPayment) => {
     if (!currentUser) return;
+    const { paidAmount, ...move } = moveWithPayment;
+    
     const movement: Movement = {
       ...move,
       id: Math.random().toString(36).substr(2, 9),
@@ -169,13 +175,24 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     if (movement.debtAccountId) {
       const totalValue = movement.quantity * movement.priceAtTime;
+      const actualDebtChange = totalValue;
+      
       setDebtAccounts(prev => prev.map(acc => {
         if (acc.id === movement.debtAccountId) {
-          const balanceChange = movement.type === 'IN' ? totalValue : -totalValue;
+          const balanceChange = movement.type === 'IN' ? actualDebtChange : -actualDebtChange;
           return { ...acc, balance: acc.balance + balanceChange };
         }
         return acc;
       }));
+
+      if (paidAmount && paidAmount > 0) {
+        addRepayment({
+          debtAccountId: movement.debtAccountId,
+          amount: paidAmount,
+          type: movement.type === 'IN' ? 'PAYMENT' : 'RECEIPT',
+          note: `دفعة فورية عند ${movement.type === 'IN' ? 'التوريد' : 'الصرف'} - حركة #${movement.id}`
+        });
+      }
     }
     toast({ title: movement.type === 'IN' ? 'تم تسجيل التوريد' : 'تم تسجيل الصرف' });
   };
@@ -241,7 +258,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       return acc;
     }));
-    toast({ title: 'تم تسجيل الحركة المالية' });
+    // We don't always want a toast if it's called from addMovement
   };
 
   const deleteRepayment = (id: string) => {
