@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 
 export default function CategoriesPage() {
-  const { categories, addCategory, items, canEdit, isAdmin } = useWarehouse();
+  const { categories, addCategory, deleteCategory, items, canEdit, isAdmin } = useWarehouse();
   const [newCatName, setNewCatName] = useState('');
 
   const handleAdd = (e: React.FormEvent) => {
@@ -82,7 +82,12 @@ export default function CategoriesPage() {
                     </TableCell>
                     {isAdmin() && (
                       <TableCell className="text-left">
-                        <Button variant="ghost" size="icon" className="text-destructive">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => deleteCategory(cat.id)}
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>

@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Wallet } from 'lucide-react';
+import { Plus, Trash2, Wallet } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 
 export default function ExpensesPage() {
-  const { expenses, addExpense, canEdit } = useWarehouse();
+  const { expenses, addExpense, deleteExpense, canEdit, isAdmin } = useWarehouse();
 
   const handleAdd = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -81,12 +81,13 @@ export default function ExpensesPage() {
                   <TableHead className="text-right">البيان</TableHead>
                   <TableHead className="text-right">التصنيف</TableHead>
                   <TableHead className="text-left">القيمة</TableHead>
+                  {isAdmin() && <TableHead className="text-left">حذف</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {expenses.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center py-12 text-muted-foreground italic font-medium">لا توجد مصاريف مسجلة</TableCell>
+                    <TableCell colSpan={isAdmin() ? 5 : 4} className="text-center py-12 text-muted-foreground italic font-medium">لا توجد مصاريف مسجلة</TableCell>
                   </TableRow>
                 ) : (
                   expenses.map((exp) => (
@@ -99,6 +100,13 @@ export default function ExpensesPage() {
                       <TableCell className="text-left font-mono font-black text-red-600">
                         - {exp.amount.toLocaleString()} $
                       </TableCell>
+                      {isAdmin() && (
+                        <TableCell className="text-left">
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteExpense(exp.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))
                 )}

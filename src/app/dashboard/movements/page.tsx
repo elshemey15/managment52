@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight, Search, Clock, User } from 'lucide-react';
+import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight, Search, Clock, User, Trash2 } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -27,7 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 
 export default function MovementsPage() {
-  const { items, movements, addMovement, debtAccounts, users } = useWarehouse();
+  const { items, movements, addMovement, deleteMovement, debtAccounts, users, isAdmin } = useWarehouse();
   const [selectedItemId, setSelectedItemId] = useState('');
   const [type, setType] = useState<'IN' | 'OUT'>('IN');
   const [quantity, setQuantity] = useState(1);
@@ -179,12 +179,13 @@ export default function MovementsPage() {
                   <TableHead className="text-right">المادة</TableHead>
                   <TableHead className="text-center">الكمية</TableHead>
                   <TableHead className="text-left">إجمالي القيمة</TableHead>
+                  {isAdmin() && <TableHead className="text-left">حذف</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredMovements.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">
+                    <TableCell colSpan={isAdmin() ? 6 : 5} className="text-center py-12 text-muted-foreground italic">
                       لا توجد سجلات مطابقة
                     </TableCell>
                   </TableRow>
@@ -223,6 +224,13 @@ export default function MovementsPage() {
                         <TableCell className="text-left font-mono font-bold text-[#336699]">
                           {(move.priceAtTime * move.quantity).toLocaleString()} $
                         </TableCell>
+                        {isAdmin() && (
+                          <TableCell className="text-left">
+                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteMovement(move.id)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     );
                   })

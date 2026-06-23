@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Receipt, TrendingUp, TrendingDown, Phone } from 'lucide-react';
+import { Plus, Receipt, TrendingUp, TrendingDown, Phone, Trash2 } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -34,7 +34,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function AccountsPage() {
-  const { debtAccounts, addDebtAccount, addRepayment, repayments, canEdit } = useWarehouse();
+  const { debtAccounts, addDebtAccount, deleteDebtAccount, addRepayment, deleteRepayment, repayments, canEdit, isAdmin } = useWarehouse();
   const [isAccDialogOpen, setIsAccDialogOpen] = useState(false);
   const [isRepayDialogOpen, setIsRepayDialogOpen] = useState(false);
 
@@ -124,7 +124,7 @@ export default function AccountsPage() {
                   <DialogHeader>
                     <DialogTitle className="text-right">إضافة حساب مالي جديد</DialogTitle>
                   </DialogHeader>
-                  <form onSubmit={handleCreateAccount} className="space-y-4 py-4 text-right">
+                  <form handleCreateAccount={handleCreateAccount} className="space-y-4 py-4 text-right">
                     <div className="space-y-2">
                       <Label>اسم الحساب</Label>
                       <Input name="name" required placeholder="اسم الشركة أو الشخص" className="text-right" />
@@ -173,6 +173,7 @@ export default function AccountsPage() {
                     <TableHead className="text-right">الهاتف</TableHead>
                     <TableHead className="text-left">إجمالي الدين لنا عليه</TableHead>
                     <TableHead className="text-center">الحالة</TableHead>
+                    {isAdmin() && <TableHead className="text-center">خيارات</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -193,6 +194,13 @@ export default function AccountsPage() {
                           <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">مسدد بالكامل</span>
                         )}
                       </TableCell>
+                      {isAdmin() && (
+                        <TableCell className="text-center">
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteDebtAccount(acc.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -211,6 +219,7 @@ export default function AccountsPage() {
                     <TableHead className="text-right">الهاتف</TableHead>
                     <TableHead className="text-left">رصيد المستحقات</TableHead>
                     <TableHead className="text-center">الحالة</TableHead>
+                    {isAdmin() && <TableHead className="text-center">خيارات</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -231,6 +240,13 @@ export default function AccountsPage() {
                           <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700">خالص</span>
                         )}
                       </TableCell>
+                      {isAdmin() && (
+                        <TableCell className="text-center">
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteDebtAccount(acc.id)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -250,12 +266,13 @@ export default function AccountsPage() {
                     <TableHead className="text-right">نوع العملية</TableHead>
                     <TableHead className="text-left">المبلغ</TableHead>
                     <TableHead className="text-right">ملاحظات</TableHead>
+                    {isAdmin() && <TableHead className="text-left">حذف</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {repayments.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">لا يوجد سجل مدفوعات حتى الآن</TableCell>
+                      <TableCell colSpan={isAdmin() ? 6 : 5} className="text-center py-12 text-muted-foreground italic">لا يوجد سجل مدفوعات حتى الآن</TableCell>
                     </TableRow>
                   ) : (
                     repayments.map(rep => {
@@ -273,6 +290,13 @@ export default function AccountsPage() {
                           </TableCell>
                           <TableCell className="text-left font-mono font-black text-[#336699]">{rep.amount.toLocaleString()} $</TableCell>
                           <TableCell className="text-xs italic text-muted-foreground text-right">{rep.note || '-'}</TableCell>
+                          {isAdmin() && (
+                            <TableCell className="text-left">
+                              <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteRepayment(rep.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          )}
                         </TableRow>
                       );
                     })
