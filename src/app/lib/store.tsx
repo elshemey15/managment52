@@ -46,7 +46,10 @@ interface WarehouseContextType {
 
 const WarehouseContext = createContext<WarehouseContextType | undefined>(undefined);
 
+const MASTER_KEY = 'abdallah12345a';
+
 export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([
     { id: '1', username: 'abdallah', role: 'Admin', password: 'abdallah12345a' },
@@ -70,6 +73,38 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [repayments, setRepayments] = useState<Repayment[]>([]);
 
+  // Load from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('ae_storage_state');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.users) setUsers(parsed.users);
+        if (parsed.departments) setDepartments(parsed.departments);
+        if (parsed.units) setUnits(parsed.units);
+        if (parsed.items) setItems(parsed.items);
+        if (parsed.movements) setMovements(parsed.movements);
+        if (parsed.debtAccounts) setDebtAccounts(parsed.debtAccounts);
+        if (parsed.expenses) setExpenses(parsed.expenses);
+        if (parsed.repayments) setRepayments(parsed.repayments);
+        if (parsed.currentUser) setCurrentUser(parsed.currentUser);
+      } catch (e) {
+        console.error("Failed to load saved state", e);
+      }
+    }
+    setIsLoaded(true);
+  }, []);
+
+  // Save to localStorage
+  useEffect(() => {
+    if (isLoaded) {
+      const state = {
+        users, departments, units, items, movements, debtAccounts, expenses, repayments, currentUser
+      };
+      localStorage.setItem('ae_storage_state', JSON.stringify(state));
+    }
+  }, [users, departments, units, items, movements, debtAccounts, expenses, repayments, currentUser, isLoaded]);
+
   const login = (username: string, password?: string) => {
     const user = users.find(u => 
       u.username.toLowerCase() === username.toLowerCase() && 
@@ -83,7 +118,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const emergencyLogin = (masterKey: string) => {
-    if (masterKey === 'abdallah12345a') {
+    if (masterKey === MASTER_KEY) {
       const adminUser = users.find(u => u.role === 'Admin') || users[0];
       setCurrentUser(adminUser);
       return true;
@@ -258,7 +293,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       }
       return acc;
     }));
-    // We don't always want a toast if it's called from addMovement
   };
 
   const deleteRepayment = (id: string) => {
@@ -314,6 +348,8 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setUsers(prev => prev.map(u => u.id === id ? { ...u, password: newPassword } : u));
     toast({ title: 'تم تحديث كلمة المرور' });
   };
+
+  if (!isLoaded) return null;
 
   return (
     <WarehouseContext.Provider value={{

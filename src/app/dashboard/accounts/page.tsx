@@ -124,7 +124,7 @@ export default function AccountsPage() {
                   <DialogHeader>
                     <DialogTitle className="text-right">إضافة حساب مالي جديد</DialogTitle>
                   </DialogHeader>
-                  <form handleCreateAccount={handleCreateAccount} className="space-y-4 py-4 text-right">
+                  <form onSubmit={handleCreateAccount} className="space-y-4 py-4 text-right">
                     <div className="space-y-2">
                       <Label>اسم الحساب</Label>
                       <Input name="name" required placeholder="اسم الشركة أو الشخص" className="text-right" />
@@ -220,7 +220,7 @@ export default function AccountsPage() {
                     <TableHead className="text-left">رصيد المستحقات</TableHead>
                     <TableHead className="text-center">الحالة</TableHead>
                     {isAdmin() && <TableHead className="text-center">خيارات</TableHead>}
-                  </TableRow>
+                  </TableHeader>
                 </TableHeader>
                 <TableBody>
                   {debtAccounts.filter(a => a.type === 'CUSTOMER').map(acc => (
