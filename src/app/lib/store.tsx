@@ -98,7 +98,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>([]);
 
   useEffect(() => {
-    // نظام الاستماع اللحظي (Real-time) للمزامنة من أي مكان في العالم
     const unsubscribers = [
       onSnapshot(collection(db, 'users'), (s) => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() } as User)))),
       onSnapshot(collection(db, 'departments'), (s) => setDepartments(s.docs.map(d => ({ id: d.id, ...d.data() } as Department)))),
@@ -320,7 +319,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteMovement = (id: string) => deleteDoc(doc(db, 'movements', id));
 
-  // دالة لمعالجة التواريخ بشكل آمن لمنع تعطل التصدير
   const parseSafeDate = (val: any) => {
     if (!val) return new Date();
     if (val.toDate && typeof val.toDate === 'function') return val.toDate();
@@ -359,7 +357,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       } else if (format === 'excel') {
         const wb = XLSX.utils.book_new();
         
-        // 1. الملخص المالي والعام
         const summaryData = [{
           'إجمالي قيمة المخزن': items.reduce((acc, i) => acc + (i.currentStock * i.purchasePrice), 0),
           'إجمالي الديون': suppliers.reduce((acc, s) => acc + s.balance, 0),
@@ -370,7 +367,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }];
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryData), "ملخص عام");
 
-        // 2. المخزن
         const excelItems = items.map(i => ({
           'الكود': i.code,
           'اسم المادة': i.name,
@@ -383,7 +379,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }));
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelItems), "المخزن والمواد");
 
-        // 3. الموردين
         const excelSuppliers = suppliers.map(s => ({
           'اسم المورد': s.name,
           'الهاتف': s.phone,
@@ -394,7 +389,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         }));
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelSuppliers), "الموردين والديون");
 
-        // 4. سجل الحركات
         const excelMovements = movements.map(m => {
           const item = items.find(i => i.id === m.itemId);
           const user = users.find(u => u.id === m.userId);
@@ -413,7 +407,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelMovements), "سجل حركات المخزن");
 
-        // 5. الحوالات والكاش
         const excelCash = cashTransactions.map(t => {
           const dateObj = parseSafeDate(t.timestamp);
           return {
@@ -427,7 +420,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         });
         XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelCash), "سجل الحوالات والكاش");
 
-        // 6. المبيعات العامة
         const excelSales = generalInvoices.map(inv => ({
           'التاريخ': inv.date,
           'اليوم': inv.day,

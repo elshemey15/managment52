@@ -2,10 +2,10 @@
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
-  // تفعيل التصدير الثابت للنشر المجاني
+  // تفعيل التصدير الثابت للنشر المجاني على أي استضافة
   output: 'export',
   images: {
-    unoptimized: true, // ضروري عند التصدير الثابت
+    unoptimized: true, // ضروري جداً عند التصدير الثابت
     remotePatterns: [
       { protocol: 'https', hostname: 'placehold.co' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
@@ -14,6 +14,8 @@ const nextConfig: NextConfig = {
   },
   typescript: { ignoreBuildErrors: true },
   eslint: { ignoreDuringBuilds: true },
+  // لضمان عمل المسارات بشكل صحيح في الاستضافات الثابتة
+  trailingSlash: true,
 };
 
 export default nextConfig;
