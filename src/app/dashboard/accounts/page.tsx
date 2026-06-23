@@ -220,7 +220,7 @@ export default function AccountsPage() {
                     <TableHead className="text-left">رصيد المستحقات</TableHead>
                     <TableHead className="text-center">الحالة</TableHead>
                     {isAdmin() && <TableHead className="text-center">خيارات</TableHead>}
-                  </TableHeader>
+                  </TableRow>
                 </TableHeader>
                 <TableBody>
                   {debtAccounts.filter(a => a.type === 'CUSTOMER').map(acc => (
