@@ -42,11 +42,18 @@ export default function DashboardOverview() {
   // تحليل المنتجات الأكثر حركة
   const getTopItems = (type: 'IN' | 'OUT', days: number) => {
     const now = new Date();
-    const startDate = new Date(now.setDate(now.getDate() - days));
+    const startDate = new Date();
+    startDate.setDate(now.getDate() - days);
     
     const itemMap = new Map<string, number>();
     movements.filter(m => {
-      const mDate = m.timestamp?.toDate ? m.timestamp.toDate() : new Date(m.timestamp);
+      // التعامل مع التوقيت سواء كان Timestamp من Firebase أو Date عادي
+      let mDate;
+      if (m.timestamp && typeof (m.timestamp as any).toDate === 'function') {
+        mDate = (m.timestamp as any).toDate();
+      } else {
+        mDate = new Date(m.timestamp);
+      }
       return m.type === type && mDate >= startDate;
     }).forEach(m => {
       itemMap.set(m.itemId, (itemMap.get(m.itemId) || 0) + m.quantity);

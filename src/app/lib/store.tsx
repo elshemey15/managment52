@@ -16,7 +16,8 @@ import {
   orderBy,
   serverTimestamp,
   increment,
-  writeBatch
+  writeBatch,
+  Timestamp
 } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
 
@@ -165,7 +166,13 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const addItem = async (i: any) => {
     const maxCode = items.reduce((max, x) => Math.max(max, parseInt(x.code) || 0), 0);
-    const itemData = { ...i, code: (maxCode + 1).toString() };
+    const itemData = { 
+      ...i, 
+      code: (maxCode + 1).toString(),
+      currentStock: Number(i.currentStock || 0),
+      purchasePrice: Number(i.purchasePrice || 0),
+      salePrice: Number(i.salePrice || 0)
+    };
     const docRef = await addDoc(collection(db, 'items'), itemData);
     
     if (itemData.currentStock > 0) {
@@ -189,22 +196,30 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const deleteSupplier = (id: string) => deleteDoc(doc(db, 'suppliers', id));
 
   const addPurchase = async (inv: any, updates: any[]) => {
-    const remaining = inv.totalValue - inv.paidAmount;
-    const status = remaining <= 0 ? 'PAID' : (inv.paidAmount > 0 ? 'PARTIAL' : 'UNPAID');
+    const totalVal = Number(inv.totalValue || 0);
+    const paid = Number(inv.paidAmount || 0);
+    const remaining = totalVal - paid;
+    const status = remaining <= 0 ? 'PAID' : (paid > 0 ? 'PARTIAL' : 'UNPAID');
     const batch = writeBatch(db);
     
     const purchaseRef = doc(collection(db, 'purchases'));
-    batch.set(purchaseRef, { ...inv, remainingAmount: remaining, status });
+    batch.set(purchaseRef, { 
+      ...inv, 
+      totalValue: totalVal,
+      paidAmount: paid,
+      remainingAmount: remaining, 
+      status 
+    });
 
     updates.forEach(u => {
       const itemRef = doc(db, 'items', u.itemId);
-      batch.update(itemRef, { currentStock: increment(u.qty) });
+      batch.update(itemRef, { currentStock: increment(Number(u.qty)) });
       const moveRef = doc(collection(db, 'movements'));
       batch.set(moveRef, {
         itemId: u.itemId,
         type: 'IN',
-        quantity: u.qty,
-        priceAtTime: inv.items.find((i: any) => i.itemId === u.itemId)?.price || 0,
+        quantity: Number(u.qty),
+        priceAtTime: Number(inv.items.find((i: any) => i.itemId === u.itemId)?.price || 0),
         userId: currentUser?.id || 'system',
         timestamp: serverTimestamp(),
         note: `توريد فاتورة من المورد: ${inv.supplierName}`
@@ -214,15 +229,15 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const supplierRef = doc(db, 'suppliers', inv.supplierId);
     batch.update(supplierRef, {
       balance: increment(remaining),
-      totalPurchases: increment(inv.totalValue),
-      totalPayments: increment(inv.paidAmount)
+      totalPurchases: increment(totalVal),
+      totalPayments: increment(paid)
     });
 
-    if (inv.paidAmount > 0) {
+    if (paid > 0) {
       const paymentRef = doc(collection(db, 'payments'));
       batch.set(paymentRef, {
         supplierId: inv.supplierId,
-        amount: inv.paidAmount,
+        amount: paid,
         date: inv.date,
         method: 'CASH',
         note: `دفعة مقدمة للفاتورة`
@@ -237,14 +252,15 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const batch = writeBatch(db);
     const itemRef = doc(db, 'items', itemId);
     const item = items.find(i => i.id === itemId);
+    const numQty = Number(qty || 0);
     
-    batch.update(itemRef, { currentStock: increment(type === 'IN' ? qty : -qty) });
+    batch.update(itemRef, { currentStock: increment(type === 'IN' ? numQty : -numQty) });
     
     const moveRef = doc(collection(db, 'movements'));
     batch.set(moveRef, {
       itemId,
       type,
-      quantity: qty,
+      quantity: numQty,
       priceAtTime: type === 'IN' ? (item?.purchasePrice || 0) : (item?.salePrice || 0),
       userId: currentUser?.id || 'system',
       timestamp: serverTimestamp(),
@@ -259,18 +275,33 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const supplier = suppliers.find(s => s.id === p.supplierId);
     if (!supplier) return;
     const batch = writeBatch(db);
+    const amount = Number(p.amount || 0);
     const paymentRef = doc(collection(db, 'payments'));
-    batch.set(paymentRef, { ...p, date: new Date().toISOString() });
+    batch.set(paymentRef, { ...p, amount, date: new Date().toISOString() });
     const supplierRef = doc(db, 'suppliers', p.supplierId);
-    batch.update(supplierRef, { balance: increment(-p.amount), totalPayments: increment(p.amount) });
+    batch.update(supplierRef, { balance: increment(-amount), totalPayments: increment(amount) });
     await batch.commit();
     toast({ title: 'تم تسجيل السداد ومزامنته' });
   };
 
-  const addExpense = (e: any) => addDoc(collection(db, 'expenses'), { ...e, timestamp: new Date().toISOString(), userId: currentUser?.id || 'system' });
+  const addExpense = (e: any) => addDoc(collection(db, 'expenses'), { 
+    ...e, 
+    amount: Number(e.amount || 0),
+    timestamp: new Date().toISOString(), 
+    userId: currentUser?.id || 'system' 
+  });
+  
   const deleteExpense = (id: string) => deleteDoc(doc(db, 'expenses', id));
   
-  const addGeneralInvoice = (inv: any) => addDoc(collection(db, 'general_invoices'), { ...inv, timestamp: serverTimestamp(), userId: currentUser?.id || 'system' });
+  const addGeneralInvoice = (inv: any) => addDoc(collection(db, 'general_invoices'), { 
+    ...inv, 
+    invoiceCount: Number(inv.invoiceCount || 0),
+    salePrice: Number(inv.salePrice || 0),
+    expenses: Number(inv.expenses || 0),
+    timestamp: serverTimestamp(), 
+    userId: currentUser?.id || 'system' 
+  });
+  
   const deleteGeneralInvoice = (id: string) => deleteDoc(doc(db, 'general_invoices', id));
 
   const deleteMovement = (id: string) => deleteDoc(doc(db, 'movements', id));
