@@ -10,7 +10,7 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
-      "public/index.html",
+      "public/**",
       "index.html"
     ],
     "cleanUrls": true,
