@@ -2,14 +2,13 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Category, Item, Movement, DebtAccount, Expense, Repayment, Department } from './types';
+import { User, Item, Movement, DebtAccount, Expense, Repayment, Department } from './types';
 import { toast } from '@/hooks/use-toast';
 
 interface WarehouseContextType {
   currentUser: User | null;
   users: User[];
   departments: Department[];
-  categories: Category[];
   items: Item[];
   movements: Movement[];
   debtAccounts: DebtAccount[];
@@ -21,9 +20,6 @@ interface WarehouseContextType {
   // Departments Management
   addDepartment: (dept: Omit<Department, 'id'>) => void;
   deleteDepartment: (id: string) => void;
-  // Categories Management
-  addCategory: (category: Omit<Category, 'id'>) => void;
-  deleteCategory: (id: string) => void;
   // Items Management
   addItem: (item: Omit<Item, 'id'>) => void;
   updateItem: (id: string, item: Partial<Item>) => void;
@@ -61,14 +57,8 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     { id: 'd1', name: 'قسم الفواكه' },
   ]);
 
-  const [categories, setCategories] = useState<Category[]>([
-    { id: 'c1', name: 'بطيخ', departmentId: 'd1' },
-    { id: 'c2', name: 'موز', departmentId: 'd1' },
-    { id: 'c3', name: 'مانجو', departmentId: 'd1' },
-  ]);
-
   const [items, setItems] = useState<Item[]>([
-    { id: 'i1', code: 'F001', name: 'بطيخ أحمر كبير', categoryId: 'c1', unit: 'قطعة', purchasePrice: 5, salePrice: 8, currentStock: 100 },
+    { id: 'i1', code: 'F001', name: 'بطيخ أحمر كبير', departmentId: 'd1', unit: 'قطعة', purchasePrice: 5, salePrice: 8, currentStock: 100 },
   ]);
 
   const [movements, setMovements] = useState<Movement[]>([]);
@@ -110,27 +100,11 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteDepartment = (id: string) => {
     if (!isAdmin()) return;
-    if (categories.some(c => c.departmentId === id)) {
-      return toast({ title: 'لا يمكن حذف قسم يحتوي على تصنيفات', variant: 'destructive' });
+    if (items.some(i => i.departmentId === id)) {
+      return toast({ title: 'لا يمكن حذف قسم يحتوي على مواد', variant: 'destructive' });
     }
     setDepartments(prev => prev.filter(d => d.id !== id));
     toast({ title: 'تم حذف القسم' });
-  };
-
-  // Categories
-  const addCategory = (cat: Omit<Category, 'id'>) => {
-    if (!canEdit()) return;
-    setCategories(prev => [...prev, { ...cat, id: Math.random().toString(36).substr(2, 9) }]);
-    toast({ title: 'تمت إضافة التصنيف بنجاح' });
-  };
-
-  const deleteCategory = (id: string) => {
-    if (!isAdmin()) return;
-    if (items.some(i => i.categoryId === id)) {
-      return toast({ title: 'لا يمكن حذف تصنيف يحتوي على مواد', variant: 'destructive' });
-    }
-    setCategories(prev => prev.filter(c => c.id !== id));
-    toast({ title: 'تم حذف التصنيف' });
   };
 
   // Items
@@ -309,8 +283,8 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   return (
     <WarehouseContext.Provider value={{
-      currentUser, users, departments, categories, items, movements, debtAccounts, expenses, repayments,
-      login, emergencyLogin, logout, addDepartment, deleteDepartment, addCategory, deleteCategory,
+      currentUser, users, departments, items, movements, debtAccounts, expenses, repayments,
+      login, emergencyLogin, logout, addDepartment, deleteDepartment,
       addItem, updateItem, deleteItem, addMovement, deleteMovement, addDebtAccount, deleteDebtAccount,
       addRepayment, deleteRepayment, addExpense, deleteExpense, addUser, deleteUser, updateUserPassword,
       canEdit, isAdmin

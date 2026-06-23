@@ -12,7 +12,6 @@ import {
   Settings, 
   LogOut,
   Wallet,
-  Tags,
   Layers
 } from 'lucide-react';
 import {
@@ -36,8 +35,7 @@ export function DashboardSidebar() {
 
   const navItems = [
     { name: 'لوحة التحكم', icon: LayoutDashboard, href: '/dashboard' },
-    { name: 'الأقسام', icon: Layers, href: '/dashboard/departments' },
-    { name: 'التصنيفات', icon: Tags, href: '/dashboard/categories' },
+    { name: 'الأقسام والمواد', icon: Layers, href: '/dashboard/departments' },
     { name: 'المستودع (المخزن)', icon: Package, href: '/dashboard/inventory' },
     { name: 'سجل الحركات', icon: ArrowLeftRight, href: '/dashboard/movements' },
     { name: 'الحسابات والديون', icon: Users, href: '/dashboard/accounts' },

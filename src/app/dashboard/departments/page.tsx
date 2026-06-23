@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/table';
 
 export default function DepartmentsPage() {
-  const { departments, categories, addDepartment, deleteDepartment, canEdit, isAdmin } = useWarehouse();
+  const { departments, items, addDepartment, deleteDepartment, canEdit, isAdmin } = useWarehouse();
   const [newName, setNewName] = useState('');
 
   const handleAdd = (e: React.FormEvent) => {
@@ -32,7 +32,7 @@ export default function DepartmentsPage() {
     <div className="max-w-4xl mx-auto space-y-6 text-right">
       <div>
         <h1 className="text-3xl font-bold text-[#336699]">أقسام المستودع</h1>
-        <p className="text-muted-foreground font-medium">الطبقة العليا لتنظيم المخزون</p>
+        <p className="text-muted-foreground font-medium">الطبقة العليا لتنظيم المخزون والمواد</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -69,7 +69,7 @@ export default function DepartmentsPage() {
               <TableHeader>
                 <TableRow className="bg-slate-50">
                   <TableHead className="text-right">اسم القسم</TableHead>
-                  <TableHead className="text-center">عدد التصنيفات</TableHead>
+                  <TableHead className="text-center">عدد المواد</TableHead>
                   {isAdmin() && <TableHead className="text-left">خيارات</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -78,7 +78,7 @@ export default function DepartmentsPage() {
                   <TableRow key={dept.id}>
                     <TableCell className="font-bold text-right">{dept.name}</TableCell>
                     <TableCell className="text-center font-black">
-                      {categories.filter(c => c.departmentId === dept.id).length}
+                      {items.filter(i => i.departmentId === dept.id).length}
                     </TableCell>
                     {isAdmin() && (
                       <TableCell className="text-left">

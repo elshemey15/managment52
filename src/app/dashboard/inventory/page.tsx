@@ -35,9 +35,9 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 export default function InventoryPage() {
-  const { items, categories, departments, addItem, updateItem, deleteItem, addMovement, debtAccounts, canEdit, isAdmin } = useWarehouse();
+  const { items, departments, addItem, updateItem, deleteItem, addMovement, debtAccounts, canEdit, isAdmin } = useWarehouse();
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [deptFilter, setDeptFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isMovementDialogOpen, setIsMovementDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -46,32 +46,28 @@ export default function InventoryPage() {
 
   // Dialog States for New Item
   const [dialogDeptId, setDialogDeptId] = useState<string>('');
-  const [dialogCatId, setDialogCatId] = useState<string>('');
   const [dialogItemName, setDialogItemName] = useState<string>('');
   const [dialogItemCode, setDialogItemCode] = useState<string>('');
 
   useEffect(() => {
-    if (isDialogOpen && !editingItem && dialogItemName && dialogCatId) {
+    if (isDialogOpen && !editingItem && dialogItemName && dialogDeptId) {
       const dept = departments.find(d => d.id === dialogDeptId);
-      const cat = categories.find(c => c.id === dialogCatId);
-      const prefix = (dept?.name?.substring(0, 2) || 'X').toUpperCase();
-      const catPrefix = (cat?.name?.substring(0, 2) || 'Y').toUpperCase();
+      const prefix = (dept?.name?.substring(0, 3) || 'ITM').toUpperCase();
       const random = Math.floor(1000 + Math.random() * 9000);
-      setDialogItemCode(`${prefix}${catPrefix}-${random}`);
+      setDialogItemCode(`${prefix}-${random}`);
     }
-  }, [dialogItemName, dialogCatId, isDialogOpen, editingItem, dialogDeptId, departments, categories]);
+  }, [dialogItemName, dialogDeptId, isDialogOpen, editingItem, departments]);
 
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.code.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || item.categoryId === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesDept = deptFilter === 'all' || item.departmentId === deptFilter;
+    return matchesSearch && matchesDept;
   });
 
   const resetDialog = () => {
     setEditingItem(null);
     setDialogDeptId('');
-    setDialogCatId('');
     setDialogItemName('');
     setDialogItemCode('');
   };
@@ -82,14 +78,14 @@ export default function InventoryPage() {
     const itemData = {
       name: dialogItemName,
       code: dialogItemCode,
-      categoryId: dialogCatId,
+      departmentId: dialogDeptId,
       unit: formData.get('unit') as string,
       purchasePrice: parseFloat(formData.get('purchasePrice') as string),
       salePrice: parseFloat(formData.get('salePrice') as string),
       currentStock: parseInt(formData.get('currentStock') as string || '0'),
     };
 
-    if (!itemData.categoryId) return toast({ title: 'يرجى اختيار القسم والتصنيف', variant: 'destructive' });
+    if (!itemData.departmentId) return toast({ title: 'يرجى اختيار القسم', variant: 'destructive' });
 
     if (editingItem) {
       updateItem(editingItem.id, itemData);
@@ -128,7 +124,7 @@ export default function InventoryPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[#336699]">مخزن المواد (المستودع)</h1>
-          <p className="text-muted-foreground font-medium">إدارة الكميات، الصرف، والوارد في مكان واحد</p>
+          <p className="text-muted-foreground font-medium">إدارة الكميات، الصرف، والوارد حسب الأقسام</p>
         </div>
         {canEdit() && (
           <Dialog open={isDialogOpen} onOpenChange={(val) => {
@@ -137,9 +133,7 @@ export default function InventoryPage() {
             if (val && editingItem) {
               setDialogItemName(editingItem.name);
               setDialogItemCode(editingItem.code);
-              setDialogCatId(editingItem.categoryId);
-              const cat = categories.find(c => c.id === editingItem.categoryId);
-              if (cat) setDialogDeptId(cat.departmentId);
+              setDialogDeptId(editingItem.departmentId);
             }
           }}>
             <DialogTrigger asChild>
@@ -149,36 +143,21 @@ export default function InventoryPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[550px]" dir="rtl">
               <DialogHeader>
-                <DialogTitle className="text-right">{editingItem ? 'تعديل بيانات المادة' : 'إنشاء صنف جديد'}</DialogTitle>
+                <DialogTitle className="text-right">{editingItem ? 'تعديل بيانات المادة' : 'إنشاء مادة جديدة'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 py-4 text-right">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>القسم</Label>
-                    <Select value={dialogDeptId} onValueChange={setDialogDeptId}>
-                      <SelectTrigger className="text-right">
-                        <SelectValue placeholder="اختر القسم" />
-                      </SelectTrigger>
-                      <SelectContent dir="rtl">
-                        {departments.map(d => (
-                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>التصنيف</Label>
-                    <Select value={dialogCatId} onValueChange={setDialogCatId} disabled={!dialogDeptId}>
-                      <SelectTrigger className="text-right">
-                        <SelectValue placeholder="اختر التصنيف" />
-                      </SelectTrigger>
-                      <SelectContent dir="rtl">
-                        {categories.filter(c => c.departmentId === dialogDeptId).map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="space-y-2">
+                  <Label>اختر القسم التابع له</Label>
+                  <Select value={dialogDeptId} onValueChange={setDialogDeptId}>
+                    <SelectTrigger className="text-right">
+                      <SelectValue placeholder="اختر القسم" />
+                    </SelectTrigger>
+                    <SelectContent dir="rtl">
+                      {departments.map(d => (
+                        <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">
@@ -251,14 +230,14 @@ export default function InventoryPage() {
             </div>
             <div className="flex items-center gap-2 flex-row-reverse">
               <Filter className="h-4 w-4 text-muted-foreground" />
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <Select value={deptFilter} onValueChange={setDeptFilter}>
                 <SelectTrigger className="w-[180px] text-right">
-                  <SelectValue placeholder="تصفية حسب التصنيف" />
+                  <SelectValue placeholder="تصفية حسب القسم" />
                 </SelectTrigger>
                 <SelectContent dir="rtl">
-                  <SelectItem value="all">كل التصنيفات</SelectItem>
-                  {categories.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  <SelectItem value="all">كل الأقسام</SelectItem>
+                  {departments.map(d => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -271,6 +250,7 @@ export default function InventoryPage() {
               <TableRow className="bg-slate-50">
                 <TableHead className="w-[120px] text-right">الكود</TableHead>
                 <TableHead className="text-right">اسم المادة</TableHead>
+                <TableHead className="text-right">القسم</TableHead>
                 <TableHead className="text-center">الكمية المتاحة</TableHead>
                 <TableHead className="text-center">تسجيل حركة</TableHead>
                 <TableHead className="text-center">الحالة</TableHead>
@@ -280,17 +260,19 @@ export default function InventoryPage() {
             <TableBody>
               {filteredItems.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="h-48 text-center text-muted-foreground">
                     <Package className="h-12 w-12 mx-auto mb-2 opacity-20" />
                     لم يتم العثور على أي مواد مطابقة
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredItems.map((item) => {
+                  const dept = departments.find(d => d.id === item.departmentId);
                   return (
                     <TableRow key={item.id} className="group">
                       <TableCell className="font-mono text-xs font-bold text-right">{item.code}</TableCell>
                       <TableCell className="font-bold text-right">{item.name}</TableCell>
+                      <TableCell className="text-right text-xs">{dept?.name || '-'}</TableCell>
                       <TableCell className="text-center">
                         <div className="text-xl font-black text-[#336699]">{item.currentStock}</div>
                         <div className="text-[10px] text-muted-foreground uppercase">{item.unit}</div>
