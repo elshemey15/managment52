@@ -68,7 +68,8 @@ export default function PurchasesPage() {
       supplierId: selectedSupplierId,
       supplierName: supplier?.name || '',
       date: new Date(invoiceDate).toISOString(),
-      dueDate: dueDate ? new Date(dueDate).toISOString() : new Date().toISOString(),
+      // إذا كان التاريخ فارغاً نستخدم تاريخ الفاتورة نفسه كافتراضي
+      dueDate: dueDate ? new Date(dueDate).toISOString() : new Date(invoiceDate).toISOString(),
       totalValue,
       paidAmount,
       items: invoiceItems
@@ -78,6 +79,7 @@ export default function PurchasesPage() {
     setSelectedSupplierId('');
     setInvoiceItems([]);
     setPaidAmount(0);
+    setDueDate('');
   };
 
   return (
@@ -106,8 +108,14 @@ export default function PurchasesPage() {
                 <Input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="text-right" />
               </div>
               <div className="space-y-2">
-                <Label>تاريخ الاستحقاق (للدين)</Label>
-                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="text-right" />
+                <Label>تاريخ الاستحقاق (اختياري)</Label>
+                <Input 
+                  type="date" 
+                  value={dueDate} 
+                  onChange={(e) => setDueDate(e.target.value)} 
+                  className="text-right" 
+                  placeholder="اتركه فارغاً للسداد الفوري"
+                />
               </div>
             </div>
 
