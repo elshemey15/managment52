@@ -14,11 +14,12 @@ interface WarehouseContextType {
   debtAccounts: DebtAccount[];
   expenses: Expense[];
   repayments: Repayment[];
-  login: (username: string) => boolean;
+  login: (username: string, password?: string) => boolean;
   logout: () => void;
   // Users Management
   addUser: (user: Omit<User, 'id'>) => void;
   deleteUser: (id: string) => void;
+  updateUserPassword: (id: string, newPassword: string) => void;
   // Items Management
   addItem: (item: Omit<Item, 'id'>) => void;
   updateItem: (id: string, item: Partial<Item>) => void;
@@ -48,9 +49,9 @@ const WarehouseContext = createContext<WarehouseContextType | undefined>(undefin
 export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([
-    { id: '1', username: 'admin', role: 'Admin' },
-    { id: '2', username: 'editor', role: 'Editor' },
-    { id: '3', username: 'logger', role: 'Logger' },
+    { id: '1', username: 'admin', role: 'Admin', password: '123' },
+    { id: '2', username: 'editor', role: 'Editor', password: '123' },
+    { id: '3', username: 'logger', role: 'Logger', password: '123' },
   ]);
 
   const [categories, setCategories] = useState<Category[]>([
@@ -71,8 +72,11 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [repayments, setRepayments] = useState<Repayment[]>([]);
 
-  const login = (username: string) => {
-    const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+  const login = (username: string, password?: string) => {
+    const user = users.find(u => 
+      u.username.toLowerCase() === username.toLowerCase() && 
+      (!u.password || u.password === password)
+    );
     if (user) {
       setCurrentUser(user);
       return true;
@@ -88,7 +92,11 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Users
   const addUser = (userData: Omit<User, 'id'>) => {
     if (!isAdmin()) return;
-    const newUser = { ...userData, id: Math.random().toString(36).substr(2, 9) };
+    const newUser = { 
+      ...userData, 
+      id: Math.random().toString(36).substr(2, 9),
+      password: userData.password || '123'
+    };
     setUsers(prev => [...prev, newUser]);
     toast({ title: 'تمت إضافة المستخدم بنجاح' });
   };
@@ -98,6 +106,12 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (id === currentUser?.id) return toast({ title: 'لا يمكنك حذف حسابك الحالي', variant: 'destructive' });
     setUsers(prev => prev.filter(u => u.id !== id));
     toast({ title: 'تم حذف المستخدم' });
+  };
+
+  const updateUserPassword = (id: string, newPassword: string) => {
+    if (!isAdmin()) return;
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, password: newPassword } : u));
+    toast({ title: 'تم تحديث كلمة المرور بنجاح' });
   };
 
   // Items
@@ -275,7 +289,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       currentUser, users, categories, items, movements, debtAccounts, expenses, repayments,
       login, logout, addUser, deleteUser, addItem, updateItem, deleteItem, addCategory, deleteCategory, 
       addMovement, deleteMovement, addDebtAccount, deleteDebtAccount, addRepayment, deleteRepayment, addExpense, deleteExpense,
-      canEdit, isAdmin
+      canEdit, isAdmin, updateUserPassword
     }}>
       {children}
     </WarehouseContext.Provider>

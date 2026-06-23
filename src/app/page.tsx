@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -11,6 +12,7 @@ import { Package, Lock, User } from 'lucide-react';
 export default function LoginPage() {
   const { login, currentUser } = useWarehouse();
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const router = useRouter();
 
@@ -22,10 +24,10 @@ export default function LoginPage() {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (login(username)) {
+    if (login(username, password)) {
       router.push('/dashboard');
     } else {
-      setError('اسم المستخدم غير صحيح. جرب "admin" أو "editor" أو "logger".');
+      setError('اسم المستخدم أو كلمة المرور غير صحيحة.');
     }
   };
 
@@ -64,7 +66,9 @@ export default function LoginPage() {
                     type="password" 
                     placeholder="كلمة المرور" 
                     className="pr-10 h-11 text-right"
-                    defaultValue="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                   />
                 </div>
               </div>

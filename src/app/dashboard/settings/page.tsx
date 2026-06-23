@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Trash2, UserCog, Shield, ShieldCheck, ShieldAlert } from 'lucide-react';
+import { Plus, Trash2, UserCog, Shield, ShieldCheck, ShieldAlert, KeyRound } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -23,12 +23,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { UserRole } from '@/app/lib/types';
+import { toast } from '@/hooks/use-toast';
 
 export default function SettingsPage() {
-  const { users, addUser, deleteUser, currentUser, isAdmin } = useWarehouse();
+  const { users, addUser, deleteUser, currentUser, isAdmin, updateUserPassword } = useWarehouse();
   const [newUsername, setNewUsername] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('Logger');
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [targetUserId, setTargetUserId] = useState<string | null>(null);
 
   if (!isAdmin()) {
     return (
@@ -43,8 +54,29 @@ export default function SettingsPage() {
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUsername) return;
-    addUser({ username: newUsername, role: newRole });
+    addUser({ username: newUsername, role: newRole, password: '123' });
     setNewUsername('');
+  };
+
+  const handlePasswordChange = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const masterKey = formData.get('masterKey') as string;
+    const newPassword = formData.get('newPassword') as string;
+
+    if (masterKey !== 'abdallah12345a') {
+      return toast({ title: 'رمز التحقق الإداري غير صحيح!', variant: 'destructive' });
+    }
+
+    if (!newPassword || newPassword.length < 3) {
+      return toast({ title: 'كلمة المرور قصيرة جداً', variant: 'destructive' });
+    }
+
+    if (targetUserId) {
+      updateUserPassword(targetUserId, newPassword);
+      setIsPasswordDialogOpen(false);
+      setTargetUserId(null);
+    }
   };
 
   return (
@@ -118,15 +150,28 @@ export default function SettingsPage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-left">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-destructive hover:bg-destructive/10"
-                        onClick={() => deleteUser(user.id)}
-                        disabled={user.id === currentUser?.id}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <div className="flex gap-1 justify-start">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-[#336699]"
+                          onClick={() => {
+                            setTargetUserId(user.id);
+                            setIsPasswordDialogOpen(true);
+                          }}
+                        >
+                          <KeyRound className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => deleteUser(user.id)}
+                          disabled={user.id === currentUser?.id}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -135,6 +180,39 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent dir="rtl" className="text-right">
+          <DialogHeader>
+            <DialogTitle>تغيير كلمة المرور</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handlePasswordChange} className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>رمز التحقق الإداري (Master Key)</Label>
+              <Input 
+                name="masterKey" 
+                type="password" 
+                required 
+                placeholder="أدخل الرمز الإداري للتأكيد" 
+                className="text-right" 
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>كلمة المرور الجديدة</Label>
+              <Input 
+                name="newPassword" 
+                type="password" 
+                required 
+                placeholder="كلمة السر الجديدة للمستخدم" 
+                className="text-right" 
+              />
+            </div>
+            <DialogFooter>
+              <Button type="submit" className="w-full bg-[#336699]">تحديث كلمة السر</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
