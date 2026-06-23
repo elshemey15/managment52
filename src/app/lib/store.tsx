@@ -20,6 +20,7 @@ import {
   Timestamp
 } from 'firebase/firestore';
 import { initializeFirebase } from '@/firebase';
+import * as XLSX from 'xlsx';
 
 interface WarehouseContextType {
   currentUser: User | null;
@@ -71,7 +72,7 @@ interface WarehouseContextType {
   recordSimpleMovement: (itemId: string, type: 'IN' | 'OUT', qty: number, note: string) => Promise<void>;
   deleteMovement: (id: string) => void;
   
-  exportAllData: () => void;
+  exportAllData: (format: 'json' | 'excel' | 'pdf') => void;
   canEdit: () => boolean;
   isAdmin: () => boolean;
 }
@@ -322,7 +323,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteMovement = (id: string) => deleteDoc(doc(db, 'movements', id));
 
-  const exportAllData = () => {
+  const exportAllData = (format: 'json' | 'excel' | 'pdf') => {
     const allData = {
       timestamp: new Date().toLocaleString('ar-EG'),
       exportedBy: currentUser?.username,
@@ -338,14 +339,35 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       units: units
     };
 
-    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `AE-Storage-Backup-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `AE-Storage-Backup-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else if (format === 'excel') {
+      const wb = XLSX.utils.book_new();
+      
+      const prepareSheet = (data: any[]) => {
+        if (!data || data.length === 0) return XLSX.utils.json_to_sheet([{ status: "لا توجد بيانات" }]);
+        return XLSX.utils.json_to_sheet(data);
+      };
+
+      XLSX.utils.book_append_sheet(wb, prepareSheet(items), "المخزن");
+      XLSX.utils.book_append_sheet(wb, prepareSheet(suppliers), "الموردين");
+      XLSX.utils.book_append_sheet(wb, prepareSheet(purchases), "المشتريات");
+      XLSX.utils.book_append_sheet(wb, prepareSheet(cashTransactions), "الكاش والحوالات");
+      XLSX.utils.book_append_sheet(wb, prepareSheet(movements), "سجل الحركات");
+      XLSX.utils.book_append_sheet(wb, prepareSheet(expenses), "المصاريف");
+
+      XLSX.writeFile(wb, `AE-Storage-Report-${new Date().toISOString().split('T')[0]}.xlsx`);
+    } else if (format === 'pdf') {
+      window.print();
+    }
+    
     toast({ title: 'تم تجهيز وتنزيل نسخة البيانات بنجاح' });
   };
 
