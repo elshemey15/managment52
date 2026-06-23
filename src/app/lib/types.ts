@@ -69,6 +69,17 @@ export interface Expense {
   userId: string;
 }
 
+export interface GeneralInvoice {
+  id: string;
+  date: string;
+  day: string;
+  salePrice?: number;
+  expenses?: number;
+  note?: string;
+  timestamp: any;
+  userId: string;
+}
+
 export interface Movement {
   id: string;
   itemId: string;
@@ -78,4 +89,5 @@ export interface Movement {
   debtAccountId?: string;
   userId: string;
   timestamp: string;
+  note?: string;
 }
