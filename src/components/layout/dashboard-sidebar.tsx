@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -11,7 +12,8 @@ import {
   Settings, 
   LogOut,
   Wallet,
-  Tags
+  Tags,
+  Layers
 } from 'lucide-react';
 import {
   Sidebar,
@@ -35,7 +37,8 @@ export function DashboardSidebar() {
   const navItems = [
     { name: 'لوحة التحكم', icon: LayoutDashboard, href: '/dashboard' },
     { name: 'المخزون', icon: Package, href: '/dashboard/inventory' },
-    { name: 'الأصناف', icon: Tags, href: '/dashboard/categories' },
+    { name: 'الأقسام', icon: Layers, href: '/dashboard/departments' },
+    { name: 'التصنيفات', icon: Tags, href: '/dashboard/categories' },
     { name: 'حركات المخزن', icon: ArrowLeftRight, href: '/dashboard/movements' },
     { name: 'الحسابات والديون', icon: Users, href: '/dashboard/accounts' },
     { name: 'المصاريف العامة', icon: Wallet, href: '/dashboard/expenses' },

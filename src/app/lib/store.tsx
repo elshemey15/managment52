@@ -1,13 +1,14 @@
 
 "use client";
 
-import React, { createContext, useContext, useState } from 'react';
-import { User, Category, Item, Movement, DebtAccount, Expense, Repayment } from './types';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User, Category, Item, Movement, DebtAccount, Expense, Repayment, Department } from './types';
 import { toast } from '@/hooks/use-toast';
 
 interface WarehouseContextType {
   currentUser: User | null;
   users: User[];
+  departments: Department[];
   categories: Category[];
   items: Item[];
   movements: Movement[];
@@ -17,18 +18,16 @@ interface WarehouseContextType {
   login: (username: string, password?: string) => boolean;
   emergencyLogin: (masterKey: string) => boolean;
   logout: () => void;
-  // Users Management
-  addUser: (user: Omit<User, 'id'>) => void;
-  deleteUser: (id: string) => void;
-  updateUserPassword: (id: string, newPassword: string) => void;
-  resetPasswordWithMasterKey: (username: string, masterKey: string, newPassword: string) => boolean;
+  // Departments Management
+  addDepartment: (dept: Omit<Department, 'id'>) => void;
+  deleteDepartment: (id: string) => void;
+  // Categories Management
+  addCategory: (category: Omit<Category, 'id'>) => void;
+  deleteCategory: (id: string) => void;
   // Items Management
   addItem: (item: Omit<Item, 'id'>) => void;
   updateItem: (id: string, item: Partial<Item>) => void;
   deleteItem: (id: string) => void;
-  // Categories Management
-  addCategory: (category: Omit<Category, 'id'>) => void;
-  deleteCategory: (id: string) => void;
   // Movements Management
   addMovement: (movement: Omit<Movement, 'id' | 'timestamp' | 'userId'>) => void;
   deleteMovement: (id: string) => void;
@@ -41,6 +40,10 @@ interface WarehouseContextType {
   // Expenses Management
   addExpense: (expense: Omit<Expense, 'id' | 'timestamp' | 'userId'>) => void;
   deleteExpense: (id: string) => void;
+  // Users Management
+  addUser: (user: Omit<User, 'id'>) => void;
+  deleteUser: (id: string) => void;
+  updateUserPassword: (id: string, newPassword: string) => void;
   
   canEdit: () => boolean;
   isAdmin: () => boolean;
@@ -52,25 +55,24 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([
     { id: '1', username: 'abdallah', role: 'Admin', password: 'abdallah12345a' },
-    { id: '2', username: 'editor', role: 'Editor', password: '123' },
-    { id: '3', username: 'logger', role: 'Logger', password: '123' },
+  ]);
+
+  const [departments, setDepartments] = useState<Department[]>([
+    { id: 'd1', name: 'قسم التقنية' },
+    { id: 'd2', name: 'قسم الأثاث' },
   ]);
 
   const [categories, setCategories] = useState<Category[]>([
-    { id: 'c1', name: 'إلكترونيات' },
-    { id: 'c2', name: 'أثاث مكتبي' },
+    { id: 'c1', name: 'إلكترونيات', departmentId: 'd1' },
+    { id: 'c2', name: 'أثاث مكتبي', departmentId: 'd2' },
   ]);
 
   const [items, setItems] = useState<Item[]>([
     { id: 'i1', code: 'E001', name: 'لابتوب احترافي', categoryId: 'c1', unit: 'قطعة', purchasePrice: 800, salePrice: 1200, currentStock: 10 },
-    { id: 'i2', code: 'F001', name: 'كرسي مكتب', categoryId: 'c2', unit: 'قطعة', purchasePrice: 50, salePrice: 95, currentStock: 25 },
   ]);
 
   const [movements, setMovements] = useState<Movement[]>([]);
-  const [debtAccounts, setDebtAccounts] = useState<DebtAccount[]>([
-    { id: 'd1', name: 'المورد العالمي المحدود', type: 'SUPPLIER', balance: 0 },
-    { id: 'd2', name: 'شركة البركة التجارية', type: 'CUSTOMER', balance: 0 },
-  ]);
+  const [debtAccounts, setDebtAccounts] = useState<DebtAccount[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [repayments, setRepayments] = useState<Repayment[]>([]);
 
@@ -88,90 +90,66 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const emergencyLogin = (masterKey: string) => {
     if (masterKey === 'abdallah12345a') {
-      const adminUser = users.find(u => u.role === 'Admin');
-      if (adminUser) {
-        setCurrentUser(adminUser);
-        return true;
-      }
-    }
-    return false;
-  };
-
-  const logout = () => setCurrentUser(null);
-
-  const isAdmin = () => currentUser?.role === 'Admin';
-  const canEdit = () => currentUser?.role === 'Admin' || currentUser?.role === 'Editor';
-
-  // Users
-  const addUser = (userData: Omit<User, 'id'>) => {
-    if (!isAdmin()) return;
-    const newUser = { 
-      ...userData, 
-      id: Math.random().toString(36).substr(2, 9),
-      password: userData.password || '123'
-    };
-    setUsers(prev => [...prev, newUser]);
-    toast({ title: 'تمت إضافة المستخدم بنجاح' });
-  };
-
-  const deleteUser = (id: string) => {
-    if (!isAdmin()) return;
-    if (id === currentUser?.id) return toast({ title: 'لا يمكنك حذف حسابك الحالي', variant: 'destructive' });
-    setUsers(prev => prev.filter(u => u.id !== id));
-    toast({ title: 'تم حذف المستخدم' });
-  };
-
-  const updateUserPassword = (id: string, newPassword: string) => {
-    if (!isAdmin()) return;
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, password: newPassword } : u));
-    toast({ title: 'تم تحديث كلمة المرور بنجاح' });
-  };
-
-  const resetPasswordWithMasterKey = (username: string, masterKey: string, newPassword: string) => {
-    if (masterKey === 'abdallah12345a') {
-      const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
-      if (userIndex === -1) return false;
-
-      setUsers(prev => prev.map((u, i) => i === userIndex ? { ...u, password: newPassword } : u));
+      const adminUser = users.find(u => u.role === 'Admin') || users[0];
+      setCurrentUser(adminUser);
       return true;
     }
     return false;
   };
 
-  // Items
-  const addItem = (item: Omit<Item, 'id'>) => {
-    if (!canEdit()) return toast({ title: 'عذراً، لا تملك الصلاحية', variant: 'destructive' });
-    const newItem = { ...item, id: Math.random().toString(36).substr(2, 9) };
-    setItems(prev => [...prev, newItem]);
-    toast({ title: 'تمت إضافة المادة بنجاح' });
+  const logout = () => setCurrentUser(null);
+  const isAdmin = () => currentUser?.role === 'Admin';
+  const canEdit = () => currentUser?.role === 'Admin' || currentUser?.role === 'Editor';
+
+  // Departments
+  const addDepartment = (dept: Omit<Department, 'id'>) => {
+    if (!canEdit()) return;
+    setDepartments(prev => [...prev, { ...dept, id: Math.random().toString(36).substr(2, 9) }]);
+    toast({ title: 'تمت إضافة القسم بنجاح' });
   };
 
-  const updateItem = (id: string, itemData: Partial<Item>) => {
-    if (!canEdit()) return toast({ title: 'عذراً، لا تملك الصلاحية', variant: 'destructive' });
-    setItems(prev => prev.map(i => i.id === id ? { ...i, ...itemData } : i));
-    toast({ title: 'تم تحديث بيانات المادة' });
-  };
-
-  const deleteItem = (id: string) => {
-    if (!isAdmin()) return toast({ title: 'فقط المدير يمكنه الحذف', variant: 'destructive' });
-    setItems(prev => prev.filter(i => i.id !== id));
-    toast({ title: 'تم حذف المادة بنجاح' });
+  const deleteDepartment = (id: string) => {
+    if (!isAdmin()) return;
+    if (categories.some(c => c.departmentId === id)) {
+      return toast({ title: 'لا يمكن حذف قسم يحتوي على تصنيفات', variant: 'destructive' });
+    }
+    setDepartments(prev => prev.filter(d => d.id !== id));
+    toast({ title: 'تم حذف القسم' });
   };
 
   // Categories
   const addCategory = (cat: Omit<Category, 'id'>) => {
     if (!canEdit()) return;
     setCategories(prev => [...prev, { ...cat, id: Math.random().toString(36).substr(2, 9) }]);
-    toast({ title: 'تمت إضافة التصنيف' });
+    toast({ title: 'تمت إضافة التصنيف بنجاح' });
   };
 
   const deleteCategory = (id: string) => {
-    if (!isAdmin()) return toast({ title: 'فقط المدير يمكنه حذف التصنيف', variant: 'destructive' });
+    if (!isAdmin()) return;
     if (items.some(i => i.categoryId === id)) {
       return toast({ title: 'لا يمكن حذف تصنيف يحتوي على مواد', variant: 'destructive' });
     }
     setCategories(prev => prev.filter(c => c.id !== id));
-    toast({ title: 'تم حذف التصنيف بنجاح' });
+    toast({ title: 'تم حذف التصنيف' });
+  };
+
+  // Items
+  const addItem = (item: Omit<Item, 'id'>) => {
+    if (!canEdit()) return;
+    setItems(prev => [...prev, { ...item, id: Math.random().toString(36).substr(2, 9) }]);
+    toast({ title: 'تمت إضافة المادة بنجاح' });
+  };
+
+  const updateItem = (id: string, itemData: Partial<Item>) => {
+    if (!canEdit()) return;
+    setItems(prev => prev.map(i => i.id === id ? { ...i, ...itemData } : i));
+    toast({ title: 'تم تحديث بيانات المادة' });
+  };
+
+  const deleteItem = (id: string) => {
+    if (!isAdmin()) return;
+    setItems(prev => prev.filter(i => i.id !== id));
+    toast({ title: 'تم حذف المادة بنجاح' });
   };
 
   // Movements
@@ -204,6 +182,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
         return acc;
       }));
     }
+    toast({ title: movement.type === 'IN' ? 'تم تسجيل التوريد' : 'تم تسجيل الصرف' });
   };
 
   const deleteMovement = (id: string) => {
@@ -308,12 +287,33 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toast({ title: 'تم حذف المصروف' });
   };
 
+  // User Management
+  const addUser = (userData: Omit<User, 'id'>) => {
+    if (!isAdmin()) return;
+    setUsers(prev => [...prev, { ...userData, id: Math.random().toString(36).substr(2, 9) }]);
+    toast({ title: 'تم إنشاء المستخدم بنجاح' });
+  };
+
+  const deleteUser = (id: string) => {
+    if (!isAdmin()) return;
+    if (id === currentUser?.id) return toast({ title: 'لا يمكنك حذف حسابك الحالي', variant: 'destructive' });
+    setUsers(prev => prev.filter(u => u.id !== id));
+    toast({ title: 'تم حذف المستخدم' });
+  };
+
+  const updateUserPassword = (id: string, newPassword: string) => {
+    if (!isAdmin()) return;
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, password: newPassword } : u));
+    toast({ title: 'تم تحديث كلمة المرور' });
+  };
+
   return (
     <WarehouseContext.Provider value={{
-      currentUser, users, categories, items, movements, debtAccounts, expenses, repayments,
-      login, emergencyLogin, logout, addUser, deleteUser, addItem, updateItem, deleteItem, addCategory, deleteCategory, 
-      addMovement, deleteMovement, addDebtAccount, deleteDebtAccount, addRepayment, deleteRepayment, addExpense, deleteExpense,
-      canEdit, isAdmin, updateUserPassword, resetPasswordWithMasterKey
+      currentUser, users, departments, categories, items, movements, debtAccounts, expenses, repayments,
+      login, emergencyLogin, logout, addDepartment, deleteDepartment, addCategory, deleteCategory,
+      addItem, updateItem, deleteItem, addMovement, deleteMovement, addDebtAccount, deleteDebtAccount,
+      addRepayment, deleteRepayment, addExpense, deleteExpense, addUser, deleteUser, updateUserPassword,
+      canEdit, isAdmin
     }}>
       {children}
     </WarehouseContext.Provider>

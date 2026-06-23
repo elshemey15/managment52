@@ -8,9 +8,15 @@ export interface User {
   password?: string;
 }
 
+export interface Department {
+  id: string;
+  name: string;
+}
+
 export interface Category {
   id: string;
   name: string;
+  departmentId: string;
   description?: string;
 }
 

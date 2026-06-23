@@ -34,7 +34,7 @@ import {
 import { Label } from '@/components/ui/label';
 
 export default function InventoryPage() {
-  const { items, categories, addItem, updateItem, deleteItem, canEdit, isAdmin } = useWarehouse();
+  const { items, categories, addItem, updateItem, deleteItem, canEdit, isAdmin, departments } = useWarehouse();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -75,7 +75,7 @@ export default function InventoryPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-[#336699]">إدارة المخزون</h1>
-          <p className="text-muted-foreground font-medium">إدارة الأصناف، الأكواد، والأسعار</p>
+          <p className="text-muted-foreground font-medium">عرض الكميات المتاحة، الأكواد، والأسعار</p>
         </div>
         {canEdit() && (
           <Dialog open={isDialogOpen} onOpenChange={(val) => {
@@ -89,25 +89,25 @@ export default function InventoryPage() {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]" dir="rtl">
               <DialogHeader>
-                <DialogTitle className="text-right">{editingItem ? 'تعديل الصنف' : 'إنشاء صنف جديد'}</DialogTitle>
+                <DialogTitle className="text-right">{editingItem ? 'تعديل بيانات المادة' : 'إنشاء صنف جديد'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 py-4 text-right">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="code">كود الصنف</Label>
-                    <Input id="code" name="code" defaultValue={editingItem?.code} required placeholder="مثال: LAP-001" className="text-right" />
+                    <Label htmlFor="code">كود المادة</Label>
+                    <Input id="code" name="code" defaultValue={editingItem?.code} required placeholder="مثال: SKU-001" className="text-right" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="name">اسم الصنف</Label>
+                    <Label htmlFor="name">اسم المادة</Label>
                     <Input id="name" name="name" defaultValue={editingItem?.name} required placeholder="اسم المادة بالكامل" className="text-right" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="categoryId">الصنف</Label>
+                    <Label htmlFor="categoryId">التصنيف</Label>
                     <Select name="categoryId" defaultValue={editingItem?.categoryId || categories[0]?.id}>
                       <SelectTrigger className="text-right">
-                        <SelectValue placeholder="اختر الصنف" />
+                        <SelectValue placeholder="اختر التصنيف" />
                       </SelectTrigger>
                       <SelectContent>
                         {categories.map(c => (
@@ -118,7 +118,7 @@ export default function InventoryPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="unit">وحدة القياس</Label>
-                    <Input id="unit" name="unit" defaultValue={editingItem?.unit} required placeholder="مثال: قطعة، كجم" className="text-right" />
+                    <Input id="unit" name="unit" defaultValue={editingItem?.unit} required placeholder="مثال: قطعة، كجم، متر" className="text-right" />
                   </div>
                 </div>
                 <div className="grid grid-cols-3 gap-4">
@@ -131,7 +131,7 @@ export default function InventoryPage() {
                     <Input id="salePrice" name="salePrice" type="number" step="0.01" defaultValue={editingItem?.salePrice} required className="text-right" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="currentStock">المخزون الأولي</Label>
+                    <Label htmlFor="currentStock">المخزون الحالي</Label>
                     <Input id="currentStock" name="currentStock" type="number" defaultValue={editingItem?.currentStock || 0} className="text-right" />
                   </div>
                 </div>
@@ -162,10 +162,10 @@ export default function InventoryPage() {
               <Filter className="h-4 w-4 text-muted-foreground" />
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                 <SelectTrigger className="w-[180px] text-right">
-                  <SelectValue placeholder="تصفية حسب الصنف" />
+                  <SelectValue placeholder="تصفية حسب التصنيف" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">كل الأصناف</SelectItem>
+                <SelectContent dir="rtl">
+                  <SelectItem value="all">كل التصنيفات</SelectItem>
                   {categories.map(c => (
                     <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                   ))}
@@ -180,9 +180,9 @@ export default function InventoryPage() {
               <TableRow className="bg-slate-50">
                 <TableHead className="w-[120px] text-right">الكود</TableHead>
                 <TableHead className="text-right">اسم المادة</TableHead>
-                <TableHead className="text-right">التصنيف</TableHead>
-                <TableHead className="text-center">السعر (شراء/بيع)</TableHead>
-                <TableHead className="text-center">الكمية المتوفرة</TableHead>
+                <TableHead className="text-right">التصنيف / القسم</TableHead>
+                <TableHead className="text-center">الكمية المتاحة</TableHead>
+                <TableHead className="text-center">الأسعار ($)</TableHead>
                 <TableHead className="text-center">الحالة</TableHead>
                 <TableHead className="w-[100px] text-center">خيارات</TableHead>
               </TableRow>
@@ -198,17 +198,22 @@ export default function InventoryPage() {
               ) : (
                 filteredItems.map((item) => {
                   const cat = categories.find(c => c.id === item.categoryId);
+                  const dept = departments.find(d => d.id === cat?.departmentId);
                   return (
                     <TableRow key={item.id} className="group">
                       <TableCell className="font-mono text-xs font-bold text-right">{item.code}</TableCell>
                       <TableCell className="font-bold text-right">{item.name}</TableCell>
-                      <TableCell className="text-right">{cat?.name || 'غير مصنف'}</TableCell>
-                      <TableCell className="text-center">
-                        <div className="text-xs text-muted-foreground">شراء: {item.purchasePrice} $</div>
-                        <div className="font-bold text-[#336699]">بيع: {item.salePrice} $</div>
+                      <TableCell className="text-right">
+                        <div className="text-sm">{cat?.name || 'غير مصنف'}</div>
+                        <div className="text-[10px] text-muted-foreground">{dept?.name || 'بدون قسم'}</div>
                       </TableCell>
-                      <TableCell className="text-center font-black">
-                        {item.currentStock} <span className="text-xs font-normal text-muted-foreground uppercase">{item.unit}</span>
+                      <TableCell className="text-center">
+                        <div className="text-xl font-black text-[#336699]">{item.currentStock}</div>
+                        <div className="text-[10px] text-muted-foreground uppercase">{item.unit}</div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <div className="text-xs text-red-600 font-bold">شراء: {item.purchasePrice}</div>
+                        <div className="text-xs text-emerald-600 font-bold">بيع: {item.salePrice}</div>
                       </TableCell>
                       <TableCell className="text-center">
                         {item.currentStock < 10 ? (
