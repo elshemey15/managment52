@@ -16,7 +16,8 @@ import {
   Scale,
   ShoppingCart,
   History,
-  FileText
+  FileText,
+  Banknote
 } from 'lucide-react';
 import {
   Sidebar,
@@ -45,6 +46,7 @@ export function DashboardSidebar() {
     { name: 'إجمالي الفواتير', icon: FileText, href: '/dashboard/total-invoices' },
     { name: 'المشتريات (فواتير)', icon: ShoppingCart, href: '/dashboard/purchases' },
     { name: 'سجل الحركات', icon: History, href: '/dashboard/movements' },
+    { name: 'الحوالات والكاش', icon: Banknote, href: '/dashboard/cash' },
     { name: 'الموردين والديون', icon: Users, href: '/dashboard/accounts' },
     { name: 'المصاريف العامة', icon: Wallet, href: '/dashboard/expenses' },
   ];

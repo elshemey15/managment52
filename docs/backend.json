@@ -54,6 +54,19 @@
         "salePrice": { "type": "number" },
         "currentStock": { "type": "number" }
       }
+    },
+    "CashTransaction": {
+      "title": "Cash Transaction",
+      "description": "Records of sent or received cash/transfers",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["SEND", "RECEIVE"] },
+        "personName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "amount": { "type": "number" },
+        "date": { "type": "string" },
+        "note": { "type": "string" }
+      }
     }
   },
   "auth": {
@@ -66,6 +79,7 @@
     "/items/{itemId}": { "schema": "Item", "description": "Inventory ledger" },
     "/departments/{deptId}": { "schema": { "type": "object", "properties": { "name": { "type": "string" } } }, "description": "Inventory Departments" },
     "/units/{unitId}": { "schema": { "type": "object", "properties": { "name": { "type": "string" } } }, "description": "Units of measure" },
-    "/expenses/{expenseId}": { "schema": "Expense", "description": "General expenses" }
+    "/expenses/{expenseId}": { "schema": "Expense", "description": "General expenses" },
+    "/cash_transactions/{transId}": { "schema": "CashTransaction", "description": "Cash and transfers ledger" }
   }
 }

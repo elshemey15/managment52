@@ -81,6 +81,18 @@ export interface GeneralInvoice {
   userId: string;
 }
 
+export interface CashTransaction {
+  id: string;
+  type: 'SEND' | 'RECEIVE';
+  personName: string;
+  phoneNumber: string;
+  amount: number;
+  date: string;
+  note?: string;
+  timestamp: any;
+  userId: string;
+}
+
 export interface Movement {
   id: string;
   itemId: string;

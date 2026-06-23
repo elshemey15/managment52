@@ -2,7 +2,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Item, Movement, Expense, Department, Unit, Supplier, PurchaseInvoice, SupplierPayment, GeneralInvoice } from './types';
+import { User, Item, Movement, Expense, Department, Unit, Supplier, PurchaseInvoice, SupplierPayment, GeneralInvoice, CashTransaction } from './types';
 import { toast } from '@/hooks/use-toast';
 import { 
   getFirestore, 
@@ -33,6 +33,7 @@ interface WarehouseContextType {
   expenses: Expense[];
   movements: Movement[];
   generalInvoices: GeneralInvoice[];
+  cashTransactions: CashTransaction[];
   
   login: (username: string, password?: string) => boolean;
   emergencyLogin: (masterKey: string) => boolean;
@@ -63,6 +64,9 @@ interface WarehouseContextType {
 
   addGeneralInvoice: (invoice: Omit<GeneralInvoice, 'id' | 'timestamp' | 'userId'>) => void;
   deleteGeneralInvoice: (id: string) => void;
+
+  addCashTransaction: (transaction: Omit<CashTransaction, 'id' | 'timestamp' | 'userId'>) => void;
+  deleteCashTransaction: (id: string) => void;
   
   recordSimpleMovement: (itemId: string, type: 'IN' | 'OUT', qty: number, note: string) => Promise<void>;
   deleteMovement: (id: string) => void;
@@ -89,6 +93,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
   const [generalInvoices, setGeneralInvoices] = useState<GeneralInvoice[]>([]);
+  const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>([]);
 
   useEffect(() => {
     const unsubscribers = [
@@ -101,7 +106,8 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       onSnapshot(query(collection(db, 'payments'), orderBy('date', 'desc')), (s) => setPayments(s.docs.map(d => ({ id: d.id, ...d.data() } as SupplierPayment)))),
       onSnapshot(query(collection(db, 'expenses'), orderBy('timestamp', 'desc')), (s) => setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() } as Expense)))),
       onSnapshot(query(collection(db, 'movements'), orderBy('timestamp', 'desc')), (s) => setMovements(s.docs.map(d => ({ id: d.id, ...d.data() } as Movement)))),
-      onSnapshot(query(collection(db, 'general_invoices'), orderBy('timestamp', 'desc')), (s) => setGeneralInvoices(s.docs.map(d => ({ id: d.id, ...d.data() } as GeneralInvoice))))
+      onSnapshot(query(collection(db, 'general_invoices'), orderBy('timestamp', 'desc')), (s) => setGeneralInvoices(s.docs.map(d => ({ id: d.id, ...d.data() } as GeneralInvoice)))),
+      onSnapshot(query(collection(db, 'cash_transactions'), orderBy('timestamp', 'desc')), (s) => setCashTransactions(s.docs.map(d => ({ id: d.id, ...d.data() } as CashTransaction))))
     ];
 
     const savedUser = localStorage.getItem('ae_current_user');
@@ -304,17 +310,26 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   
   const deleteGeneralInvoice = (id: string) => deleteDoc(doc(db, 'general_invoices', id));
 
+  const addCashTransaction = (trans: any) => addDoc(collection(db, 'cash_transactions'), {
+    ...trans,
+    amount: Number(trans.amount || 0),
+    timestamp: serverTimestamp(),
+    userId: currentUser?.id || 'system'
+  });
+
+  const deleteCashTransaction = (id: string) => deleteDoc(doc(db, 'cash_transactions', id));
+
   const deleteMovement = (id: string) => deleteDoc(doc(db, 'movements', id));
 
   if (!isLoaded) return null;
 
   return (
     <WarehouseContext.Provider value={{
-      currentUser, users, departments, units, items, suppliers, purchases, payments, expenses, movements, generalInvoices,
+      currentUser, users, departments, units, items, suppliers, purchases, payments, expenses, movements, generalInvoices, cashTransactions,
       login, emergencyLogin, logout, addUser, deleteUser, updateUserPassword,
       addDepartment, deleteDepartment, addUnit, deleteUnit,
       addItem, updateItem, deleteItem, addSupplier, updateSupplier, deleteSupplier,
-      addPurchase, addPayment, addExpense, deleteExpense, addGeneralInvoice, deleteGeneralInvoice, recordSimpleMovement, deleteMovement, canEdit, isAdmin
+      addPurchase, addPayment, addExpense, deleteExpense, addGeneralInvoice, deleteGeneralInvoice, addCashTransaction, deleteCashTransaction, recordSimpleMovement, deleteMovement, canEdit, isAdmin
     }}>
       {children}
     </WarehouseContext.Provider>
