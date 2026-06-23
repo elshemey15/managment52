@@ -64,7 +64,7 @@ export default function SettingsPage() {
     const masterKey = formData.get('masterKey') as string;
     const newPassword = formData.get('newPassword') as string;
 
-    if (masterKey !== 'abdallah12345a') {
+    if (masterKey !== 'abdallah1245a') {
       return toast({ title: 'رمز التحقق الإداري غير صحيح!', variant: 'destructive' });
     }
 

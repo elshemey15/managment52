@@ -20,6 +20,7 @@ interface WarehouseContextType {
   addUser: (user: Omit<User, 'id'>) => void;
   deleteUser: (id: string) => void;
   updateUserPassword: (id: string, newPassword: string) => void;
+  resetPasswordWithMasterKey: (username: string, masterKey: string, newPassword: string) => boolean;
   // Items Management
   addItem: (item: Omit<Item, 'id'>) => void;
   updateItem: (id: string, item: Partial<Item>) => void;
@@ -112,6 +113,15 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!isAdmin()) return;
     setUsers(prev => prev.map(u => u.id === id ? { ...u, password: newPassword } : u));
     toast({ title: 'تم تحديث كلمة المرور بنجاح' });
+  };
+
+  const resetPasswordWithMasterKey = (username: string, masterKey: string, newPassword: string) => {
+    if (masterKey !== 'abdallah1245a') return false;
+    const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
+    if (userIndex === -1) return false;
+
+    setUsers(prev => prev.map((u, i) => i === userIndex ? { ...u, password: newPassword } : u));
+    return true;
   };
 
   // Items
@@ -289,7 +299,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       currentUser, users, categories, items, movements, debtAccounts, expenses, repayments,
       login, logout, addUser, deleteUser, addItem, updateItem, deleteItem, addCategory, deleteCategory, 
       addMovement, deleteMovement, addDebtAccount, deleteDebtAccount, addRepayment, deleteRepayment, addExpense, deleteExpense,
-      canEdit, isAdmin, updateUserPassword
+      canEdit, isAdmin, updateUserPassword, resetPasswordWithMasterKey
     }}>
       {children}
     </WarehouseContext.Provider>
