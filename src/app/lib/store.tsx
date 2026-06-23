@@ -66,7 +66,7 @@ interface WarehouseContextType {
 }
 
 const WarehouseContext = createContext<WarehouseContextType | undefined>(undefined);
-const MASTER_KEY = 'abdallah12345a';
+const MASTER_KEY = 'abdallah123456a';
 
 export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { db } = initializeFirebase();
