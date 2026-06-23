@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeftRight, ArrowDownLeft, ArrowUpRight, Search, Clock, User, Trash2, Calendar as CalendarIcon, X } from 'lucide-react';
+import { Slider } from "@/components/ui/slider";
 import {
   Select,
   SelectContent,
@@ -30,7 +31,7 @@ export default function MovementsPage() {
   const { items, movements, addMovement, deleteMovement, debtAccounts, users, isAdmin } = useWarehouse();
   const [selectedItemId, setSelectedItemId] = useState('');
   const [type, setType] = useState<'IN' | 'OUT'>('IN');
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<number>(1);
   const [debtAccountId, setDebtAccountId] = useState('');
   const [historySearch, setHistorySearch] = useState('');
   const [dateFilter, setDateFilter] = useState('');
@@ -73,6 +74,8 @@ export default function MovementsPage() {
     return matchesSearch && matchesDate;
   });
 
+  const activeItem = items.find(i => i.id === selectedItemId);
+
   return (
     <div className="space-y-8 text-right">
       <div>
@@ -89,7 +92,7 @@ export default function MovementsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleRecord} className="space-y-4">
+            <form onSubmit={handleRecord} className="space-y-6">
               <div className="space-y-2">
                 <Label>نوع الحركة</Label>
                 <div className="grid grid-cols-2 gap-2">
@@ -121,22 +124,36 @@ export default function MovementsPage() {
                   <SelectContent dir="rtl">
                     {items.map(item => (
                       <SelectItem key={item.id} value={item.id}>
-                        {item.name} ({item.code}) - المتوفر: {item.currentStock}
+                        {item.name} ({item.code}) - المتوفر: {item.currentStock.toLocaleString()}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="qty">الكمية</Label>
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="qty">الكمية (أنصاف أو أرقام)</Label>
+                  <span className="text-xs font-black bg-blue-50 text-blue-700 px-2 py-1 rounded">{quantity}</span>
+                </div>
+                
+                <Slider 
+                  value={[quantity]} 
+                  max={type === 'OUT' && activeItem ? activeItem.currentStock : 100} 
+                  step={0.1}
+                  className="py-2"
+                  onValueChange={(vals) => setQuantity(vals[0])}
+                  disabled={!selectedItemId}
+                />
+
                 <Input 
                   id="qty" 
                   type="number" 
-                  min="1" 
+                  step="any"
+                  min="0.1" 
                   className="h-11 text-right"
                   value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
                 />
               </div>
 
@@ -153,12 +170,9 @@ export default function MovementsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <p className="text-[10px] text-muted-foreground italic font-bold">
-                  * التوريد يزيد دين المورد. الصرف يزيد مستحقاتنا من العميل.
-                </p>
               </div>
 
-              <Button type="submit" className="w-full h-11 bg-[#336699] mt-4 font-bold text-lg">
+              <Button type="submit" className="w-full h-12 bg-[#336699] mt-4 font-bold text-lg">
                 تأكيد الحركة
               </Button>
             </form>
@@ -246,7 +260,7 @@ export default function MovementsPage() {
                           <div className="text-[10px] text-muted-foreground uppercase">{item?.code}</div>
                         </TableCell>
                         <TableCell className="text-center font-black">
-                          {move.quantity}
+                          {move.quantity.toLocaleString()}
                         </TableCell>
                         <TableCell className="text-left font-mono font-bold text-[#336699]">
                           {(move.priceAtTime * move.quantity).toLocaleString()} $

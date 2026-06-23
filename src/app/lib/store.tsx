@@ -18,33 +18,24 @@ interface WarehouseContextType {
   login: (username: string, password?: string) => boolean;
   emergencyLogin: (masterKey: string) => boolean;
   logout: () => void;
-  // Departments Management
   addDepartment: (dept: Omit<Department, 'id'>) => void;
   deleteDepartment: (id: string) => void;
-  // Units Management
   addUnit: (unit: Omit<Unit, 'id'>) => void;
   deleteUnit: (id: string) => void;
-  // Items Management
   addItem: (item: Omit<Item, 'id' | 'code'>) => void;
   updateItem: (id: string, item: Partial<Item>) => void;
   deleteItem: (id: string) => void;
-  // Movements Management
   addMovement: (movement: Omit<Movement, 'id' | 'timestamp' | 'userId'>) => void;
   deleteMovement: (id: string) => void;
-  // Accounts Management
   addDebtAccount: (account: Omit<DebtAccount, 'id' | 'balance'>) => void;
   deleteDebtAccount: (id: string) => void;
-  // Repayments Management
   addRepayment: (repayment: Omit<Repayment, 'id' | 'timestamp' | 'userId'>) => void;
   deleteRepayment: (id: string) => void;
-  // Expenses Management
   addExpense: (expense: Omit<Expense, 'id' | 'timestamp' | 'userId'>) => void;
   deleteExpense: (id: string) => void;
-  // Users Management
   addUser: (user: Omit<User, 'id'>) => void;
   deleteUser: (id: string) => void;
   updateUserPassword: (id: string, newPassword: string) => void;
-  
   canEdit: () => boolean;
   isAdmin: () => boolean;
 }
@@ -100,7 +91,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const isAdmin = () => currentUser?.role === 'Admin';
   const canEdit = () => currentUser?.role === 'Admin' || currentUser?.role === 'Editor';
 
-  // Departments
   const addDepartment = (dept: Omit<Department, 'id'>) => {
     if (!canEdit()) return;
     setDepartments(prev => [...prev, { ...dept, id: Math.random().toString(36).substr(2, 9) }]);
@@ -116,7 +106,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toast({ title: 'تم حذف القسم' });
   };
 
-  // Units
   const addUnit = (unit: Omit<Unit, 'id'>) => {
     if (!canEdit()) return;
     setUnits(prev => [...prev, { ...unit, id: Math.random().toString(36).substr(2, 9) }]);
@@ -132,18 +121,13 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toast({ title: 'تم حذف وحدة القياس' });
   };
 
-  // Items
   const addItem = (item: Omit<Item, 'id' | 'code'>) => {
     if (!canEdit()) return;
-    
-    // Auto-generate numeric code starting from 1
     const maxCode = items.reduce((max, i) => {
       const codeNum = parseInt(i.code);
       return isNaN(codeNum) ? max : Math.max(max, codeNum);
     }, 0);
-    
     const newCode = (maxCode + 1).toString();
-
     setItems(prev => [...prev, { 
       ...item, 
       id: Math.random().toString(36).substr(2, 9),
@@ -164,7 +148,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toast({ title: 'تم حذف المادة بنجاح' });
   };
 
-  // Movements
   const addMovement = (move: Omit<Movement, 'id' | 'timestamp' | 'userId'>) => {
     if (!currentUser) return;
     const movement: Movement = {
@@ -225,7 +208,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toast({ title: 'تم حذف الحركة وتصحيح الأرصدة' });
   };
 
-  // Debt Accounts
   const addDebtAccount = (acc: Omit<DebtAccount, 'id' | 'balance'>) => {
     if (!canEdit()) return;
     setDebtAccounts(prev => [...prev, { ...acc, id: Math.random().toString(36).substr(2, 9), balance: 0 }]);
@@ -242,7 +224,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toast({ title: 'تم حذف الحساب المالي' });
   };
 
-  // Repayments
   const addRepayment = (rep: Omit<Repayment, 'id' | 'timestamp' | 'userId'>) => {
     if (!currentUser) return;
     const repayment: Repayment = {
@@ -280,7 +261,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toast({ title: 'تم حذف حركة السداد وتصحيح الرصيد' });
   };
 
-  // Expenses
   const addExpense = (exp: Omit<Expense, 'id' | 'timestamp' | 'userId'>) => {
     if (!currentUser) return;
     const expense: Expense = {
@@ -299,7 +279,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     toast({ title: 'تم حذف المصروف' });
   };
 
-  // User Management
   const addUser = (userData: Omit<User, 'id'>) => {
     if (!isAdmin()) return;
     setUsers(prev => [...prev, { ...userData, id: Math.random().toString(36).substr(2, 9) }]);

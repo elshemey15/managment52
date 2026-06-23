@@ -37,6 +37,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Slider } from "@/components/ui/slider";
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
@@ -48,6 +49,7 @@ export default function InventoryPage() {
   const [editingItem, setEditingItem] = useState<any>(null);
   const [activeItem, setActiveItem] = useState<any>(null);
   const [movementType, setMovementType] = useState<'IN' | 'OUT'>('IN');
+  const [movementQty, setMovementQty] = useState<number>(1);
 
   const [dialogDeptId, setDialogDeptId] = useState<string>('');
   const [dialogUnitId, setDialogUnitId] = useState<string>('');
@@ -72,7 +74,7 @@ export default function InventoryPage() {
       unitId: dialogUnitId,
       purchasePrice: parseFloat(formData.get('purchasePrice') as string),
       salePrice: parseFloat(formData.get('salePrice') as string),
-      currentStock: parseInt(formData.get('currentStock') as string || '0'),
+      currentStock: parseFloat(formData.get('currentStock') as string || '0'),
     };
 
     if (!itemData.departmentId) return toast({ title: 'يرجى اختيار القسم', variant: 'destructive' });
@@ -91,7 +93,7 @@ export default function InventoryPage() {
   const handleMovementSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const qty = parseInt(formData.get('quantity') as string);
+    const qty = parseFloat(formData.get('quantity') as string);
     const debtAccId = formData.get('debtAccountId') as string;
 
     if (movementType === 'OUT' && activeItem.currentStock < qty) {
@@ -108,6 +110,7 @@ export default function InventoryPage() {
 
     setIsMovementDialogOpen(false);
     setActiveItem(null);
+    setMovementQty(1);
   };
 
   return (
@@ -177,22 +180,18 @@ export default function InventoryPage() {
                   />
                 </div>
 
-                {!editingItem && (
-                   <p className="text-[10px] text-blue-600 font-bold">* سيتم توليد الكود تلقائياً عند الحفظ</p>
-                )}
-
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="purchasePrice">سعر الشراء</Label>
-                    <Input id="purchasePrice" name="purchasePrice" type="number" step="0.01" defaultValue={editingItem?.purchasePrice} required className="text-right" />
+                    <Input id="purchasePrice" name="purchasePrice" type="number" step="any" defaultValue={editingItem?.purchasePrice} required className="text-right" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="salePrice">سعر البيع</Label>
-                    <Input id="salePrice" name="salePrice" type="number" step="0.01" defaultValue={editingItem?.salePrice} required className="text-right" />
+                    <Input id="salePrice" name="salePrice" type="number" step="any" defaultValue={editingItem?.salePrice} required className="text-right" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="currentStock">المخزون الحالي</Label>
-                    <Input id="currentStock" name="currentStock" type="number" defaultValue={editingItem?.currentStock || 0} className="text-right" />
+                    <Input id="currentStock" name="currentStock" type="number" step="any" defaultValue={editingItem?.currentStock || 0} className="text-right" />
                   </div>
                 </div>
                 <DialogFooter>
@@ -261,7 +260,7 @@ export default function InventoryPage() {
                             <TableCell className="font-mono text-xs font-bold text-right text-[#336699]">{item.code}</TableCell>
                             <TableCell className="font-bold text-right">{item.name}</TableCell>
                             <TableCell className="text-center">
-                              <div className="text-lg font-black text-slate-700">{item.currentStock}</div>
+                              <div className="text-lg font-black text-slate-700">{item.currentStock.toLocaleString()}</div>
                               <div className="text-[10px] text-muted-foreground font-bold">{unit?.name || 'قطعة'}</div>
                             </TableCell>
                             <TableCell className="text-center">
@@ -273,6 +272,7 @@ export default function InventoryPage() {
                                   onClick={() => {
                                     setActiveItem(item);
                                     setMovementType('IN');
+                                    setMovementQty(1);
                                     setIsMovementDialogOpen(true);
                                   }}
                                 >
@@ -285,6 +285,7 @@ export default function InventoryPage() {
                                   onClick={() => {
                                     setActiveItem(item);
                                     setMovementType('OUT');
+                                    setMovementQty(1);
                                     setIsMovementDialogOpen(true);
                                   }}
                                 >
@@ -332,15 +333,38 @@ export default function InventoryPage() {
             <DialogTitle>تسجيل {movementType === 'IN' ? 'وارد (توريد)' : 'صادر (صرف)'} للمادة</DialogTitle>
           </DialogHeader>
           {activeItem && (
-            <form onSubmit={handleMovementSubmit} className="space-y-4 py-4">
+            <form onSubmit={handleMovementSubmit} className="space-y-6 py-4">
               <div className="bg-slate-50 p-3 rounded-lg border">
                 <p className="text-sm font-bold">{activeItem.name}</p>
-                <p className="text-xs text-muted-foreground">الكود: {activeItem.code} | المتوفر: {activeItem.currentStock}</p>
+                <p className="text-xs text-muted-foreground">الكود: {activeItem.code} | المتوفر: {activeItem.currentStock.toLocaleString()}</p>
               </div>
-              <div className="space-y-2">
-                <Label>الكمية</Label>
-                <Input name="quantity" type="number" min="1" required className="text-right" defaultValue="1" />
+              
+              <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <Label>الكمية (أرقام أو كسور)</Label>
+                  <span className="text-xs font-black bg-blue-50 text-blue-700 px-2 py-1 rounded">{movementQty}</span>
+                </div>
+                
+                <Slider 
+                  defaultValue={[1]} 
+                  max={movementType === 'OUT' ? activeItem.currentStock : 100} 
+                  step={0.1}
+                  className="py-4"
+                  onValueChange={(vals) => setMovementQty(vals[0])}
+                />
+                
+                <Input 
+                  name="quantity" 
+                  type="number" 
+                  step="any"
+                  min="0.1" 
+                  required 
+                  className="text-right" 
+                  value={movementQty}
+                  onChange={(e) => setMovementQty(parseFloat(e.target.value) || 0)}
+                />
               </div>
+
               <div className="space-y-2">
                 <Label>ربط بحساب (دين / ذمة)</Label>
                 <Select name="debtAccountId" defaultValue="none">
@@ -358,7 +382,7 @@ export default function InventoryPage() {
                 </Select>
               </div>
               <DialogFooter>
-                <Button type="submit" className={`w-full font-bold ${movementType === 'IN' ? 'bg-emerald-600' : 'bg-amber-600'}`}>
+                <Button type="submit" className={`w-full font-bold h-12 text-lg ${movementType === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-amber-600 hover:bg-amber-700'}`}>
                   تأكيد العملية
                 </Button>
               </DialogFooter>
