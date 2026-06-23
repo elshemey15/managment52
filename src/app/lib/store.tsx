@@ -71,6 +71,7 @@ interface WarehouseContextType {
   recordSimpleMovement: (itemId: string, type: 'IN' | 'OUT', qty: number, note: string) => Promise<void>;
   deleteMovement: (id: string) => void;
   
+  exportAllData: () => void;
   canEdit: () => boolean;
   isAdmin: () => boolean;
 }
@@ -321,6 +322,33 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteMovement = (id: string) => deleteDoc(doc(db, 'movements', id));
 
+  const exportAllData = () => {
+    const allData = {
+      timestamp: new Date().toLocaleString('ar-EG'),
+      exportedBy: currentUser?.username,
+      warehouseItems: items,
+      suppliers: suppliers,
+      purchases: purchases,
+      payments: payments,
+      expenses: expenses,
+      movements: movements,
+      generalInvoices: generalInvoices,
+      cashTransactions: cashTransactions,
+      departments: departments,
+      units: units
+    };
+
+    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `AE-Storage-Backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: 'تم تجهيز وتنزيل نسخة البيانات بنجاح' });
+  };
+
   if (!isLoaded) return null;
 
   return (
@@ -329,7 +357,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       login, emergencyLogin, logout, addUser, deleteUser, updateUserPassword,
       addDepartment, deleteDepartment, addUnit, deleteUnit,
       addItem, updateItem, deleteItem, addSupplier, updateSupplier, deleteSupplier,
-      addPurchase, addPayment, addExpense, deleteExpense, addGeneralInvoice, deleteGeneralInvoice, addCashTransaction, deleteCashTransaction, recordSimpleMovement, deleteMovement, canEdit, isAdmin
+      addPurchase, addPayment, addExpense, deleteExpense, addGeneralInvoice, deleteGeneralInvoice, addCashTransaction, deleteCashTransaction, recordSimpleMovement, deleteMovement, exportAllData, canEdit, isAdmin
     }}>
       {children}
     </WarehouseContext.Provider>
