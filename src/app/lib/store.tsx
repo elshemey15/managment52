@@ -5,10 +5,6 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Item, Movement, DebtAccount, Expense, Repayment, Department, Unit, Supplier, PurchaseInvoice, SupplierPayment } from './types';
 import { toast } from '@/hooks/use-toast';
 
-// This store is being migrated to Firebase. 
-// For now, it will use local state but with the new structures requested.
-// We will simulate the logic for paid/unpaid inventory.
-
 interface WarehouseContextType {
   currentUser: User | null;
   users: User[];
@@ -23,6 +19,10 @@ interface WarehouseContextType {
   login: (username: string, password?: string) => boolean;
   emergencyLogin: (masterKey: string) => boolean;
   logout: () => void;
+  
+  addUser: (user: Omit<User, 'id'>) => void;
+  deleteUser: (id: string) => void;
+  updateUserPassword: (id: string, newPass: string) => void;
   
   addDepartment: (dept: Omit<Department, 'id'>) => void;
   deleteDepartment: (id: string) => void;
@@ -110,6 +110,24 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const isAdmin = () => currentUser?.role === 'Admin';
   const canEdit = () => currentUser?.role === 'Admin' || currentUser?.role === 'Editor';
 
+  const addUser = (u: any) => {
+    setUsers(prev => [...prev, { ...u, id: Math.random().toString(36).substr(2, 9) }]);
+    toast({ title: 'تم إنشاء المستخدم بنجاح' });
+  };
+  
+  const deleteUser = (id: string) => {
+    if (id === currentUser?.id) {
+      return toast({ title: 'لا يمكنك حذف حسابك الحالي', variant: 'destructive' });
+    }
+    setUsers(prev => prev.filter(x => x.id !== id));
+    toast({ title: 'تم حذف المستخدم' });
+  };
+  
+  const updateUserPassword = (id: string, newPass: string) => {
+    setUsers(prev => prev.map(u => u.id === id ? { ...u, password: newPass } : u));
+    toast({ title: 'تم تحديث كلمة المرور بنجاح' });
+  };
+
   const addDepartment = (d: any) => {
     setDepartments(prev => [...prev, { ...d, id: Math.random().toString(36).substr(2, 9) }]);
   };
@@ -138,13 +156,11 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     
     setPurchases(prev => [newInvoice, ...prev]);
     
-    // Update Items Stock
     setItems(prev => prev.map(item => {
       const update = updates.find(u => u.itemId === item.id);
       return update ? { ...item, currentStock: item.currentStock + update.qty } : item;
     }));
 
-    // Update Supplier Balance
     setSuppliers(prev => prev.map(sup => {
       if (sup.id === inv.supplierId) {
         return {
@@ -201,7 +217,8 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   return (
     <WarehouseContext.Provider value={{
       currentUser, users, departments, units, items, suppliers, purchases, payments, expenses,
-      login, emergencyLogin, logout, addDepartment, deleteDepartment, addUnit, deleteUnit,
+      login, emergencyLogin, logout, addUser, deleteUser, updateUserPassword,
+      addDepartment, deleteDepartment, addUnit, deleteUnit,
       addItem, updateItem, deleteItem, addSupplier, updateSupplier, deleteSupplier,
       addPurchase, addPayment, addExpense, deleteExpense, canEdit, isAdmin
     }}>
