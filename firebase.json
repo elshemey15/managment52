@@ -9,9 +9,7 @@
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**",
-      "public/index.html",
-      "index.html"
+      "**/node_modules/**"
     ],
     "cleanUrls": true,
     "trailingSlash": true,
