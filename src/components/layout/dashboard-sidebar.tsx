@@ -36,10 +36,10 @@ export function DashboardSidebar() {
 
   const navItems = [
     { name: 'لوحة التحكم', icon: LayoutDashboard, href: '/dashboard' },
-    { name: 'المخزون', icon: Package, href: '/dashboard/inventory' },
+    { name: 'المستودع (المخزن)', icon: Package, href: '/dashboard/inventory' },
     { name: 'الأقسام', icon: Layers, href: '/dashboard/departments' },
     { name: 'التصنيفات', icon: Tags, href: '/dashboard/categories' },
-    { name: 'حركات المخزن', icon: ArrowLeftRight, href: '/dashboard/movements' },
+    { name: 'سجل الحركات', icon: ArrowLeftRight, href: '/dashboard/movements' },
     { name: 'الحسابات والديون', icon: Users, href: '/dashboard/accounts' },
     { name: 'المصاريف العامة', icon: Wallet, href: '/dashboard/expenses' },
   ];
