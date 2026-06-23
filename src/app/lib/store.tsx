@@ -323,131 +323,133 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteMovement = (id: string) => deleteDoc(doc(db, 'movements', id));
 
+  const parseSafeDate = (val: any) => {
+    if (!val) return new Date();
+    if (val.toDate && typeof val.toDate === 'function') return val.toDate();
+    if (val.seconds) return new Date(val.seconds * 1000);
+    const d = new Date(val);
+    return isNaN(d.getTime()) ? new Date() : d;
+  };
+
   const exportAllData = (format: 'json' | 'excel' | 'pdf') => {
-    const timestampStr = new Date().toLocaleString('ar-EG');
-    
-    if (format === 'json') {
-      const allData = {
-        timestamp: timestampStr,
-        exportedBy: currentUser?.username,
-        warehouseItems: items,
-        suppliers: suppliers,
-        purchases: purchases,
-        payments: payments,
-        expenses: expenses,
-        movements: movements,
-        generalInvoices: generalInvoices,
-        cashTransactions: cashTransactions,
-        departments: departments,
-        units: units
-      };
-      const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `AE-Storage-Backup-${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else if (format === 'excel') {
-      const wb = XLSX.utils.book_new();
+    try {
+      const timestampStr = new Date().toLocaleString('ar-EG');
       
-      // 1. المخزن (Items with Department and Unit Names)
-      const excelItems = items.map(i => ({
-        'الكود': i.code,
-        'اسم المادة': i.name,
-        'القسم': departments.find(d => d.id === i.departmentId)?.name || 'غير معروف',
-        'الوحدة': units.find(u => u.id === i.unitId)?.name || 'غير معروف',
-        'سعر الشراء': i.purchasePrice,
-        'سعر البيع': i.salePrice,
-        'المخزون الحالي': i.currentStock,
-        'إجمالي قيمة المخزون': (i.currentStock * i.purchasePrice)
-      }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelItems), "المخزن والمواد");
-
-      // 2. الموردين والديون
-      const excelSuppliers = suppliers.map(s => ({
-        'اسم المورد': s.name,
-        'الهاتف': s.phone,
-        'العنوان': s.address,
-        'إجمالي المشتريات': s.totalPurchases,
-        'إجمالي المسدد': s.totalPayments,
-        'المديونية المتبقية': s.balance
-      }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelSuppliers), "الموردين والديون");
-
-      // 3. سجل حركات المخزن (Movements with Item Names)
-      const excelMovements = movements.map(m => {
-        const item = items.find(i => i.id === m.itemId);
-        const user = users.find(u => u.id === m.userId);
-        const dateObj = m.timestamp?.toDate ? m.timestamp.toDate() : new Date(m.timestamp);
-        return {
-          'التاريخ': dateObj.toLocaleDateString('ar-EG'),
-          'الوقت': dateObj.toLocaleTimeString('ar-EG'),
-          'نوع الحركة': m.type === 'IN' ? 'وارد' : 'منصرف',
-          'اسم المادة': item?.name || 'مادة محذوفة',
-          'كود المادة': item?.code || '-',
-          'الكمية': m.quantity,
-          'السعر وقت الحركة': m.priceAtTime,
-          'المستخدم المسؤول': user?.username || 'نظام آلي',
-          'ملاحظات': m.note || '-'
+      if (format === 'json') {
+        const allData = {
+          timestamp: timestampStr,
+          exportedBy: currentUser?.username,
+          warehouseItems: items,
+          suppliers: suppliers,
+          purchases: purchases,
+          payments: payments,
+          expenses: expenses,
+          movements: movements,
+          generalInvoices: generalInvoices,
+          cashTransactions: cashTransactions,
+          departments: departments,
+          units: units
         };
-      });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelMovements), "سجل حركات المخزن");
+        const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `AE-Storage-Backup-${new Date().toISOString().split('T')[0]}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } else if (format === 'excel') {
+        const wb = XLSX.utils.book_new();
+        
+        // 1. الملخص المالي والعام
+        const summaryData = [{
+          'إجمالي قيمة المخزن': items.reduce((acc, i) => acc + (i.currentStock * i.purchasePrice), 0),
+          'إجمالي الديون': suppliers.reduce((acc, s) => acc + s.balance, 0),
+          'عدد الأصناف الكلي': items.length,
+          'عدد الموردين': suppliers.length,
+          'إجمالي المبيعات العامة': generalInvoices.reduce((acc, i) => acc + (i.salePrice || 0), 0),
+          'وقت التصدير': timestampStr
+        }];
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryData), "ملخص عام");
 
-      // 4. الحوالات والكاش
-      const excelCash = cashTransactions.map(t => {
-        const dateObj = t.timestamp?.toDate ? t.timestamp.toDate() : new Date(t.timestamp);
-        return {
-          'التاريخ': dateObj.toLocaleDateString('ar-EG'),
-          'النوع': t.type === 'RECEIVE' ? 'استلام (+)' : 'إرسال (-)',
-          'اسم الطرف': t.personName,
-          'رقم الهاتف': t.phoneNumber,
-          'المبلغ': t.amount,
-          'ملاحظات': t.note || '-'
-        };
-      });
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelCash), "سجل الحوالات والكاش");
+        // 2. المخزن
+        const excelItems = items.map(i => ({
+          'الكود': i.code,
+          'اسم المادة': i.name,
+          'القسم': departments.find(d => d.id === i.departmentId)?.name || 'غير معروف',
+          'الوحدة': units.find(u => u.id === i.unitId)?.name || 'غير معروف',
+          'سعر الشراء': i.purchasePrice,
+          'سعر البيع': i.salePrice,
+          'المخزون الحالي': i.currentStock,
+          'إجمالي القيمة': (i.currentStock * i.purchasePrice)
+        }));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelItems), "المخزن والمواد");
 
-      // 5. فواتير المشتريات
-      const excelPurchases = purchases.map(p => ({
-        'التاريخ': new Date(p.date).toLocaleDateString('ar-EG'),
-        'المورد': p.supplierName,
-        'إجمالي الفاتورة': p.totalValue,
-        'المدفوع': p.paidAmount,
-        'المتبقي': p.remainingAmount,
-        'الحالة': p.status,
-        'تاريخ الاستحقاق': new Date(p.dueDate).toLocaleDateString('ar-EG')
-      }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelPurchases), "فواتير المشتريات");
+        // 3. الموردين
+        const excelSuppliers = suppliers.map(s => ({
+          'اسم المورد': s.name,
+          'الهاتف': s.phone,
+          'العنوان': s.address,
+          'إجمالي المشتريات': s.totalPurchases,
+          'إجمالي المسدد': s.totalPayments,
+          'المديونية المتبقية': s.balance
+        }));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelSuppliers), "الموردين والديون");
 
-      // 6. المصاريف العامة
-      const excelExpenses = expenses.map(e => ({
-        'التاريخ': new Date(e.timestamp).toLocaleDateString('ar-EG'),
-        'البيان': e.description,
-        'التصنيف': e.category,
-        'القيمة': e.amount
-      }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelExpenses), "المصاريف العامة");
+        // 4. سجل الحركات
+        const excelMovements = movements.map(m => {
+          const item = items.find(i => i.id === m.itemId);
+          const user = users.find(u => u.id === m.userId);
+          const dateObj = parseSafeDate(m.timestamp);
+          return {
+            'التاريخ': dateObj.toLocaleDateString('ar-EG'),
+            'الوقت': dateObj.toLocaleTimeString('ar-EG'),
+            'نوع الحركة': m.type === 'IN' ? 'وارد' : 'منصرف',
+            'اسم المادة': item?.name || 'مادة محذوفة',
+            'كود المادة': item?.code || '-',
+            'الكمية': m.quantity,
+            'السعر': m.priceAtTime,
+            'المستخدم': user?.username || 'نظام آلي',
+            'ملاحظات': m.note || '-'
+          };
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelMovements), "سجل حركات المخزن");
 
-      // 7. إجمالي الفواتير العامة (Sales Log)
-      const excelSales = generalInvoices.map(inv => ({
-        'التاريخ': new Date(inv.date).toLocaleDateString('ar-EG'),
-        'اليوم': inv.day,
-        'عدد الفواتير': inv.invoiceCount,
-        'إجمالي المبيعات': inv.salePrice,
-        'إجمالي المصروفات': inv.expenses,
-        'الصافي': (inv.salePrice || 0) - (inv.expenses || 0),
-        'ملاحظات': inv.note || '-'
-      }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelSales), "سجل المبيعات العام");
+        // 5. الحوالات والكاش
+        const excelCash = cashTransactions.map(t => {
+          const dateObj = parseSafeDate(t.timestamp);
+          return {
+            'التاريخ': dateObj.toLocaleDateString('ar-EG'),
+            'النوع': t.type === 'RECEIVE' ? 'استلام (+)' : 'إرسال (-)',
+            'اسم الطرف': t.personName,
+            'رقم الهاتف': t.phoneNumber,
+            'المبلغ': t.amount,
+            'ملاحظات': t.note || '-'
+          };
+        });
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelCash), "سجل الحوالات والكاش");
 
-      XLSX.writeFile(wb, `AE-Storage-Full-Report-${new Date().toISOString().split('T')[0]}.xlsx`);
-    } else if (format === 'pdf') {
-      window.print();
+        // 6. المبيعات العامة
+        const excelSales = generalInvoices.map(inv => ({
+          'التاريخ': inv.date,
+          'اليوم': inv.day,
+          'عدد الفواتير': inv.invoiceCount,
+          'المبيعات': inv.salePrice,
+          'المصروفات': inv.expenses,
+          'الصافي': (inv.salePrice || 0) - (inv.expenses || 0)
+        }));
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelSales), "سجل المبيعات اليومي");
+
+        XLSX.writeFile(wb, `AE-Storage-Report-${new Date().toISOString().split('T')[0]}.xlsx`);
+      } else if (format === 'pdf') {
+        window.print();
+      }
+      
+      toast({ title: 'تم تجهيز وتنزيل تقرير البيانات بنجاح' });
+    } catch (error) {
+      console.error("Export error:", error);
+      toast({ title: 'حدث خطأ أثناء تصدير البيانات، يرجى المحاولة مرة أخرى', variant: 'destructive' });
     }
-    
-    toast({ title: 'تم تجهيز وتنزيل تقرير البيانات الشامل بنجاح' });
   };
 
   if (!isLoaded) return null;
