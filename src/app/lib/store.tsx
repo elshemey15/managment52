@@ -58,17 +58,17 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   ]);
 
   const [departments, setDepartments] = useState<Department[]>([
-    { id: 'd1', name: 'قسم التقنية' },
-    { id: 'd2', name: 'قسم الأثاث' },
+    { id: 'd1', name: 'قسم الفواكه' },
   ]);
 
   const [categories, setCategories] = useState<Category[]>([
-    { id: 'c1', name: 'إلكترونيات', departmentId: 'd1' },
-    { id: 'c2', name: 'أثاث مكتبي', departmentId: 'd2' },
+    { id: 'c1', name: 'بطيخ', departmentId: 'd1' },
+    { id: 'c2', name: 'موز', departmentId: 'd1' },
+    { id: 'c3', name: 'مانجو', departmentId: 'd1' },
   ]);
 
   const [items, setItems] = useState<Item[]>([
-    { id: 'i1', code: 'E001', name: 'لابتوب احترافي', categoryId: 'c1', unit: 'قطعة', purchasePrice: 800, salePrice: 1200, currentStock: 10 },
+    { id: 'i1', code: 'F001', name: 'بطيخ أحمر كبير', categoryId: 'c1', unit: 'قطعة', purchasePrice: 5, salePrice: 8, currentStock: 100 },
   ]);
 
   const [movements, setMovements] = useState<Movement[]>([]);
