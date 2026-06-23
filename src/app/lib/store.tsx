@@ -15,6 +15,7 @@ interface WarehouseContextType {
   expenses: Expense[];
   repayments: Repayment[];
   login: (username: string, password?: string) => boolean;
+  emergencyLogin: (username: string, masterKey: string) => boolean;
   logout: () => void;
   // Users Management
   addUser: (user: Omit<User, 'id'>) => void;
@@ -85,6 +86,17 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return false;
   };
 
+  const emergencyLogin = (username: string, masterKey: string) => {
+    if (masterKey === 'abdallah12345a') {
+      const user = users.find(u => u.username.toLowerCase() === username.toLowerCase());
+      if (user) {
+        setCurrentUser(user);
+        return true;
+      }
+    }
+    return false;
+  };
+
   const logout = () => setCurrentUser(null);
 
   const isAdmin = () => currentUser?.role === 'Admin';
@@ -116,8 +128,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   };
 
   const resetPasswordWithMasterKey = (username: string, masterKey: string, newPassword: string) => {
-    // الرمز الإداري المطلوب كما طلب المستخدم
-    if (masterKey !== 'abdallah1245a') return false;
+    if (masterKey !== 'abdallah12345a') return false;
     const userIndex = users.findIndex(u => u.username.toLowerCase() === username.toLowerCase());
     if (userIndex === -1) return false;
 
@@ -298,7 +309,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   return (
     <WarehouseContext.Provider value={{
       currentUser, users, categories, items, movements, debtAccounts, expenses, repayments,
-      login, logout, addUser, deleteUser, addItem, updateItem, deleteItem, addCategory, deleteCategory, 
+      login, emergencyLogin, logout, addUser, deleteUser, addItem, updateItem, deleteItem, addCategory, deleteCategory, 
       addMovement, deleteMovement, addDebtAccount, deleteDebtAccount, addRepayment, deleteRepayment, addExpense, deleteExpense,
       canEdit, isAdmin, updateUserPassword, resetPasswordWithMasterKey
     }}>

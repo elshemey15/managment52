@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Package, Lock, User, KeyRound } from 'lucide-react';
+import { Package, Lock, User } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,7 @@ import {
 import { toast } from '@/hooks/use-toast';
 
 export default function LoginPage() {
-  const { login, currentUser, resetPasswordWithMasterKey } = useWarehouse();
+  const { login, emergencyLogin, currentUser } = useWarehouse();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -42,18 +42,17 @@ export default function LoginPage() {
     }
   };
 
-  const handleResetPassword = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleEmergencyAccess = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const userToReset = formData.get('resetUser') as string;
+    const userToLogin = formData.get('resetUser') as string;
     const masterKey = formData.get('masterKey') as string;
-    const newPass = formData.get('newPassword') as string;
 
-    if (resetPasswordWithMasterKey(userToReset, masterKey, newPass)) {
-      toast({ title: 'تمت إعادة تعيين كلمة المرور بنجاح' });
-      setIsResetOpen(false);
+    if (emergencyLogin(userToLogin, masterKey)) {
+      toast({ title: 'تم الدخول بنجاح باستخدام الرمز الاحتياطي' });
+      router.push('/dashboard');
     } else {
-      toast({ title: 'رمز التحقق أو اسم المستخدم غير صحيح', variant: 'destructive' });
+      toast({ title: 'الرمز الاحتياطي أو اسم المستخدم غير صحيح', variant: 'destructive' });
     }
   };
 
@@ -109,35 +108,25 @@ export default function LoginPage() {
                   </DialogTrigger>
                   <DialogContent dir="rtl" className="text-right">
                     <DialogHeader>
-                      <DialogTitle>إعادة تعيين كلمة المرور</DialogTitle>
+                      <DialogTitle>الدخول الطارئ للنظام</DialogTitle>
                     </DialogHeader>
-                    <form onSubmit={handleResetPassword} className="space-y-4 py-4">
+                    <form onSubmit={handleEmergencyAccess} className="space-y-4 py-4">
                       <div className="space-y-2">
                         <Label>اسم المستخدم</Label>
                         <Input name="resetUser" required placeholder="أدخل اسم المستخدم" className="text-right" />
                       </div>
                       <div className="space-y-2">
-                        <Label>رمز التحقق الإداري (Master Key)</Label>
+                        <Label>الرمز الاحتياطي (Master Key)</Label>
                         <Input 
                           name="masterKey" 
                           type="password" 
                           required 
-                          placeholder="أدخل الرمز الإداري" 
-                          className="text-right" 
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>كلمة المرور الجديدة</Label>
-                        <Input 
-                          name="newPassword" 
-                          type="password" 
-                          required 
-                          placeholder="كلمة السر الجديدة" 
+                          placeholder="أدخل الرمز الاحتياطي abdallah12345a" 
                           className="text-right" 
                         />
                       </div>
                       <DialogFooter>
-                        <Button type="submit" className="w-full bg-[#336699]">تحديث كلمة السر</Button>
+                        <Button type="submit" className="w-full bg-[#336699]">دخول للنظام</Button>
                       </DialogFooter>
                     </form>
                   </DialogContent>

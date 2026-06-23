@@ -64,8 +64,7 @@ export default function SettingsPage() {
     const masterKey = formData.get('masterKey') as string;
     const newPassword = formData.get('newPassword') as string;
 
-    // الرمز الإداري الموحد abdallah1245a كما في واجهة نسيت كلمة المرور
-    if (masterKey !== 'abdallah1245a') {
+    if (masterKey !== 'abdallah12345a') {
       return toast({ title: 'رمز التحقق الإداري غير صحيح!', variant: 'destructive' });
     }
 
