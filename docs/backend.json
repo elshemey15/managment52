@@ -9,7 +9,7 @@
         "name": { "type": "string" },
         "phone": { "type": "string" },
         "address": { "type": "string" },
-        "balance": { "type": "number", "description": "Current debt owed to the supplier" },
+        "balance": { "type": "number" },
         "totalPurchases": { "type": "number" },
         "totalPayments": { "type": "number" }
       },
@@ -67,12 +67,49 @@
         "date": { "type": "string" },
         "note": { "type": "string" }
       }
+    },
+    "Expense": {
+      "title": "Expense",
+      "type": "object",
+      "properties": {
+        "description": { "type": "string" },
+        "amount": { "type": "number" },
+        "category": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "userId": { "type": "string" }
+      }
+    },
+    "GeneralInvoice": {
+      "title": "General Invoice",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string" },
+        "day": { "type": "string" },
+        "invoiceCount": { "type": "number" },
+        "salePrice": { "type": "number" },
+        "expenses": { "type": "number" },
+        "note": { "type": "string" }
+      }
+    },
+    "Movement": {
+      "title": "Inventory Movement",
+      "type": "object",
+      "properties": {
+        "itemId": { "type": "string" },
+        "type": { "type": "string", "enum": ["IN", "OUT"] },
+        "quantity": { "type": "number" },
+        "priceAtTime": { "type": "number" },
+        "userId": { "type": "string" },
+        "timestamp": { "type": "object" },
+        "note": { "type": "string" }
+      }
     }
   },
   "auth": {
     "providers": ["password"]
   },
   "firestore": {
+    "/users/{userId}": { "schema": { "type": "object", "properties": { "username": { "type": "string" }, "role": { "type": "string" }, "password": { "type": "string" } } }, "description": "Users database" },
     "/suppliers/{supplierId}": { "schema": "Supplier", "description": "Suppliers database" },
     "/purchases/{purchaseId}": { "schema": "PurchaseInvoice", "description": "Purchases history" },
     "/payments/{paymentId}": { "schema": "SupplierPayment", "description": "Payments ledger" },
@@ -80,6 +117,8 @@
     "/departments/{deptId}": { "schema": { "type": "object", "properties": { "name": { "type": "string" } } }, "description": "Inventory Departments" },
     "/units/{unitId}": { "schema": { "type": "object", "properties": { "name": { "type": "string" } } }, "description": "Units of measure" },
     "/expenses/{expenseId}": { "schema": "Expense", "description": "General expenses" },
-    "/cash_transactions/{transId}": { "schema": "CashTransaction", "description": "Cash and transfers ledger" }
+    "/cash_transactions/{transId}": { "schema": "CashTransaction", "description": "Cash and transfers ledger" },
+    "/general_invoices/{invId}": { "schema": "GeneralInvoice", "description": "Daily total invoices" },
+    "/movements/{moveId}": { "schema": "Movement", "description": "Detailed inventory movements" }
   }
 }
