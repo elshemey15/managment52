@@ -28,37 +28,40 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 
 export default function MovementsPage() {
-  const { items, movements, addMovement, deleteMovement, debtAccounts, users, isAdmin } = useWarehouse();
+  const { items, movements, suppliers, addPurchase, deleteMovement, users, isAdmin } = useWarehouse();
   const [selectedItemId, setSelectedItemId] = useState('');
-  const [type, setType] = useState<'IN' | 'OUT'>('IN');
   const [quantity, setQuantity] = useState<number>(1);
-  const [debtAccountId, setDebtAccountId] = useState('');
+  const [supplierId, setSupplierId] = useState('');
+  const [paidNow, setPaidNow] = useState<number>(0);
   const [historySearch, setHistorySearch] = useState('');
   const [dateFilter, setDateFilter] = useState('');
 
-  const handleRecord = (e: React.FormEvent) => {
+  const handleRecordInward = (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedItemId) return toast({ title: 'يرجى اختيار مادة', variant: 'destructive' });
+    if (!supplierId || supplierId === 'none') return toast({ title: 'يرجى اختيار مورد', variant: 'destructive' });
     
     const item = items.find(i => i.id === selectedItemId);
+    const supplier = suppliers.find(s => s.id === supplierId);
     if (!item) return;
 
-    if (type === 'OUT' && item.currentStock < quantity) {
-      return toast({ title: 'المخزون غير كافٍ!', variant: 'destructive' });
-    }
+    const totalVal = item.purchasePrice * quantity;
 
-    addMovement({
-      itemId: selectedItemId,
-      type,
-      quantity,
-      priceAtTime: type === 'IN' ? item.purchasePrice : item.salePrice,
-      debtAccountId: debtAccountId === 'none' || !debtAccountId ? undefined : debtAccountId
-    });
+    addPurchase({
+      supplierId,
+      supplierName: supplier?.name || '',
+      date: new Date().toISOString(),
+      dueDate: new Date().toISOString(),
+      totalValue: totalVal,
+      paidAmount: paidNow,
+      items: [{ itemId: selectedItemId, qty: quantity, price: item.purchasePrice }]
+    }, [{ itemId: selectedItemId, qty: quantity }]);
 
-    toast({ title: 'تم تسجيل الحركة بنجاح' });
+    toast({ title: 'تم تسجيل التوريد وتحديث المخزن' });
     setQuantity(1);
     setSelectedItemId('');
-    setDebtAccountId('');
+    setSupplierId('');
+    setPaidNow(0);
   };
 
   const filteredMovements = movements.filter(m => {
@@ -79,42 +82,20 @@ export default function MovementsPage() {
   return (
     <div className="space-y-8 text-right">
       <div>
-        <h1 className="text-3xl font-bold text-[#336699]">حركات المخزن</h1>
-        <p className="text-muted-foreground font-medium">تسجيل عمليات التوريد والصرف ومراجعة السجل التاريخي</p>
+        <h1 className="text-3xl font-bold text-[#336699]">حركات التوريد (المشتريات)</h1>
+        <p className="text-muted-foreground font-medium">تسجيل توريد بضاعة جديدة ومراجعة السجل التاريخي</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <Card className="border-none shadow-sm h-fit">
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2 flex-row-reverse">
-              <ArrowLeftRight className="h-5 w-5 text-accent" />
-              معاملة جديدة
+              <ArrowDownLeft className="h-5 w-5 text-emerald-600" />
+              تسجيل توريد (وارد)
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleRecord} className="space-y-6">
-              <div className="space-y-2">
-                <Label>نوع الحركة</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button 
-                    type="button" 
-                    variant={type === 'IN' ? 'default' : 'outline'}
-                    className={`h-12 font-bold ${type === 'IN' ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-none' : ''}`}
-                    onClick={() => setType('IN')}
-                  >
-                    <ArrowDownLeft className="ml-2 h-4 w-4" /> توريد (داخل)
-                  </Button>
-                  <Button 
-                    type="button" 
-                    variant={type === 'OUT' ? 'default' : 'outline'}
-                    className={`h-12 font-bold ${type === 'OUT' ? 'bg-amber-600 hover:bg-amber-700 text-white border-none' : ''}`}
-                    onClick={() => setType('OUT')}
-                  >
-                    <ArrowUpRight className="ml-2 h-4 w-4" /> صرف (خارج)
-                  </Button>
-                </div>
-              </div>
-
+            <form onSubmit={handleRecordInward} className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="item">اختر المادة</Label>
                 <Select value={selectedItemId} onValueChange={setSelectedItemId}>
@@ -133,13 +114,13 @@ export default function MovementsPage() {
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <Label htmlFor="qty">الكمية (أنصاف أو أرقام)</Label>
+                  <Label htmlFor="qty">الكمية الموردة</Label>
                   <span className="text-xs font-black bg-blue-50 text-blue-700 px-2 py-1 rounded">{quantity}</span>
                 </div>
                 
                 <Slider 
                   value={[quantity]} 
-                  max={type === 'OUT' && activeItem ? activeItem.currentStock : 100} 
+                  max={1000} 
                   step={0.1}
                   className="py-2"
                   onValueChange={(vals) => setQuantity(vals[0])}
@@ -158,22 +139,33 @@ export default function MovementsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="debt">ربط بحساب (آجل / دين)</Label>
-                <Select value={debtAccountId} onValueChange={setDebtAccountId}>
+                <Label htmlFor="supplier">المورد</Label>
+                <Select value={supplierId} onValueChange={setSupplierId}>
                   <SelectTrigger className="h-11 text-right">
-                    <SelectValue placeholder="اختر حساباً (اختياري)" />
+                    <SelectValue placeholder="اختر المورد..." />
                   </SelectTrigger>
                   <SelectContent dir="rtl">
-                    <SelectItem value="none">بدون ربط (نقدي)</SelectItem>
-                    {debtAccounts.filter(a => a.type === (type === 'IN' ? 'SUPPLIER' : 'CUSTOMER')).map(acc => (
-                      <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                    {suppliers.map(sup => (
+                      <SelectItem key={sup.id} value={sup.id}>{sup.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              <Button type="submit" className="w-full h-12 bg-[#336699] mt-4 font-bold text-lg">
-                تأكيد الحركة
+              <div className="space-y-2">
+                <Label>المبلغ المدفوع الآن</Label>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  className="h-11 text-right" 
+                  value={paidNow}
+                  onChange={(e) => setPaidNow(parseFloat(e.target.value) || 0)}
+                  placeholder="0.00 $"
+                />
+              </div>
+
+              <Button type="submit" className="w-full h-12 bg-emerald-600 hover:bg-emerald-700 mt-4 font-bold text-lg">
+                تأكيد التوريد
               </Button>
             </form>
           </CardContent>
