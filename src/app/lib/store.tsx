@@ -98,6 +98,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>([]);
 
   useEffect(() => {
+    // نظام الاستماع اللحظي (Real-time) للمزامنة من أي مكان في العالم
     const unsubscribers = [
       onSnapshot(collection(db, 'users'), (s) => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() } as User)))),
       onSnapshot(collection(db, 'departments'), (s) => setDepartments(s.docs.map(d => ({ id: d.id, ...d.data() } as Department)))),
@@ -139,11 +140,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (k === MASTER_KEY) {
       let admin = users.find(u => u.role === 'Admin');
       if (!admin) {
-        admin = {
-          id: 'root-admin',
-          username: 'Abdallah_Root',
-          role: 'Admin'
-        };
+        admin = { id: 'root-admin', username: 'Abdallah_Root', role: 'Admin' };
       }
       setCurrentUser(admin);
       localStorage.setItem('ae_current_user', JSON.stringify(admin));
@@ -323,6 +320,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const deleteMovement = (id: string) => deleteDoc(doc(db, 'movements', id));
 
+  // دالة لمعالجة التواريخ بشكل آمن لمنع تعطل التصدير
   const parseSafeDate = (val: any) => {
     if (!val) return new Date();
     if (val.toDate && typeof val.toDate === 'function') return val.toDate();

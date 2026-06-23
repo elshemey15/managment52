@@ -1,6 +1,7 @@
 
 /**
  * Firebase configuration object.
+ * تأكد من استبدال القيم أدناه بمعلومات مشروعك من لوحة تحكم Firebase
  */
 export const firebaseConfig = {
   apiKey: "AIzaSyB-Placeholder-Key",
