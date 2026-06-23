@@ -73,8 +73,8 @@ export default function InventoryPage() {
       name: formData.get('name') as string,
       departmentId: dialogDeptId,
       unitId: dialogUnitId,
-      purchasePrice: parseFloat(formData.get('purchasePrice') as string),
-      salePrice: parseFloat(formData.get('salePrice') as string),
+      purchasePrice: parseFloat(formData.get('purchasePrice') as string || '0'),
+      salePrice: parseFloat(formData.get('salePrice') as string || '0'),
       currentStock: parseFloat(formData.get('currentStock') as string || '0'),
     };
 
@@ -193,8 +193,8 @@ export default function InventoryPage() {
                     <Input id="purchasePrice" name="purchasePrice" type="number" step="any" defaultValue={editingItem?.purchasePrice} required className="text-right" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="salePrice">سعر البيع</Label>
-                    <Input id="salePrice" name="salePrice" type="number" step="any" defaultValue={editingItem?.salePrice} required className="text-right" />
+                    <Label htmlFor="salePrice">سعر البيع (اختياري)</Label>
+                    <Input id="salePrice" name="salePrice" type="number" step="any" defaultValue={editingItem?.salePrice} className="text-right" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="currentStock">المخزون الحالي</Label>
