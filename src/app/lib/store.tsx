@@ -2,8 +2,23 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, Item, Movement, DebtAccount, Expense, Repayment, Department, Unit, Supplier, PurchaseInvoice, SupplierPayment } from './types';
+import { User, Item, Movement, Expense, Department, Unit, Supplier, PurchaseInvoice, SupplierPayment } from './types';
 import { toast } from '@/hooks/use-toast';
+import { 
+  getFirestore, 
+  collection, 
+  onSnapshot, 
+  addDoc, 
+  setDoc, 
+  doc, 
+  deleteDoc, 
+  query, 
+  orderBy,
+  serverTimestamp,
+  increment,
+  writeBatch
+} from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
 
 interface WarehouseContextType {
   currentUser: User | null;
@@ -15,6 +30,7 @@ interface WarehouseContextType {
   purchases: PurchaseInvoice[];
   payments: SupplierPayment[];
   expenses: Expense[];
+  movements: Movement[];
   
   login: (username: string, password?: string) => boolean;
   emergencyLogin: (masterKey: string) => boolean;
@@ -43,6 +59,8 @@ interface WarehouseContextType {
   addExpense: (expense: Omit<Expense, 'id' | 'timestamp' | 'userId'>) => void;
   deleteExpense: (id: string) => void;
   
+  deleteMovement: (id: string) => void;
+  
   canEdit: () => boolean;
   isAdmin: () => boolean;
 }
@@ -51,12 +69,11 @@ const WarehouseContext = createContext<WarehouseContextType | undefined>(undefin
 const MASTER_KEY = 'abdallah12345a';
 
 export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { db } = initializeFirebase();
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  const [users, setUsers] = useState<User[]>([
-    { id: '1', username: 'abdallah', role: 'Admin', password: MASTER_KEY },
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
   const [items, setItems] = useState<Item[]>([]);
@@ -64,163 +81,192 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [purchases, setPurchases] = useState<PurchaseInvoice[]>([]);
   const [payments, setPayments] = useState<SupplierPayment[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [movements, setMovements] = useState<Movement[]>([]);
 
+  // Real-time synchronization for all collections
   useEffect(() => {
-    const saved = localStorage.getItem('ae_v2_state');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setUsers(parsed.users || users);
-        setDepartments(parsed.departments || []);
-        setUnits(parsed.units || []);
-        setItems(parsed.items || []);
-        setSuppliers(parsed.suppliers || []);
-        setPurchases(parsed.purchases || []);
-        setPayments(parsed.payments || []);
-        setExpenses(parsed.expenses || []);
-        setCurrentUser(parsed.currentUser || null);
-      } catch (e) { console.error(e); }
-    }
+    const unsubscribers = [
+      onSnapshot(collection(db, 'users'), (s) => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() } as User)))),
+      onSnapshot(collection(db, 'departments'), (s) => setDepartments(s.docs.map(d => ({ id: d.id, ...d.data() } as Department)))),
+      onSnapshot(collection(db, 'units'), (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit)))),
+      onSnapshot(collection(db, 'items'), (s) => setItems(s.docs.map(d => ({ id: d.id, ...d.data() } as Item)))),
+      onSnapshot(collection(db, 'suppliers'), (s) => setSuppliers(s.docs.map(d => ({ id: d.id, ...d.data() } as Supplier)))),
+      onSnapshot(query(collection(db, 'purchases'), orderBy('date', 'desc')), (s) => setPurchases(s.docs.map(d => ({ id: d.id, ...d.data() } as PurchaseInvoice)))),
+      onSnapshot(query(collection(db, 'payments'), orderBy('date', 'desc')), (s) => setPayments(s.docs.map(d => ({ id: d.id, ...d.data() } as SupplierPayment)))),
+      onSnapshot(query(collection(db, 'expenses'), orderBy('timestamp', 'desc')), (s) => setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() } as Expense)))),
+      onSnapshot(query(collection(db, 'movements'), orderBy('timestamp', 'desc')), (s) => setMovements(s.docs.map(d => ({ id: d.id, ...d.data() } as Movement))))
+    ];
+
+    // Load currentUser from local session only for persistence of login
+    const savedUser = localStorage.getItem('ae_current_user');
+    if (savedUser) setCurrentUser(JSON.parse(savedUser));
+    
     setIsLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem('ae_v2_state', JSON.stringify({
-        users, departments, units, items, suppliers, purchases, payments, expenses, currentUser
-      }));
-    }
-  }, [users, departments, units, items, suppliers, purchases, payments, expenses, currentUser, isLoaded]);
+    return () => unsubscribers.forEach(u => u());
+  }, [db]);
 
   const login = (u: string, p?: string) => {
     const user = users.find(x => x.username.toLowerCase() === u.toLowerCase() && x.password === p);
-    if (user) { setCurrentUser(user); return true; }
+    if (user) { 
+      setCurrentUser(user); 
+      localStorage.setItem('ae_current_user', JSON.stringify(user));
+      return true; 
+    }
     return false;
   };
 
   const emergencyLogin = (k: string) => {
     if (k === MASTER_KEY) {
-      setCurrentUser(users[0]);
-      return true;
+      const admin = users.find(u => u.role === 'Admin') || users[0];
+      if (admin) {
+        setCurrentUser(admin);
+        localStorage.setItem('ae_current_user', JSON.stringify(admin));
+        return true;
+      }
     }
     return false;
   };
 
-  const logout = () => setCurrentUser(null);
+  const logout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('ae_current_user');
+  };
+
   const isAdmin = () => currentUser?.role === 'Admin';
   const canEdit = () => currentUser?.role === 'Admin' || currentUser?.role === 'Editor';
 
   const addUser = (u: any) => {
-    setUsers(prev => [...prev, { ...u, id: Math.random().toString(36).substr(2, 9) }]);
+    addDoc(collection(db, 'users'), u);
     toast({ title: 'تم إنشاء المستخدم بنجاح' });
   };
   
   const deleteUser = (id: string) => {
-    if (id === currentUser?.id) {
-      return toast({ title: 'لا يمكنك حذف حسابك الحالي', variant: 'destructive' });
-    }
-    setUsers(prev => prev.filter(x => x.id !== id));
-    toast({ title: 'تم حذف المستخدم' });
+    if (id === currentUser?.id) return toast({ title: 'لا يمكنك حذف حسابك الحالي', variant: 'destructive' });
+    deleteDoc(doc(db, 'users', id));
   };
   
   const updateUserPassword = (id: string, newPass: string) => {
-    setUsers(prev => prev.map(u => u.id === id ? { ...u, password: newPass } : u));
+    setDoc(doc(db, 'users', id), { password: newPass }, { merge: true });
     toast({ title: 'تم تحديث كلمة المرور بنجاح' });
   };
 
-  const addDepartment = (d: any) => {
-    setDepartments(prev => [...prev, { ...d, id: Math.random().toString(36).substr(2, 9) }]);
-  };
-  const deleteDepartment = (id: string) => setDepartments(prev => prev.filter(x => x.id !== id));
+  const addDepartment = (d: any) => addDoc(collection(db, 'departments'), d);
+  const deleteDepartment = (id: string) => deleteDoc(doc(db, 'departments', id));
 
-  const addUnit = (u: any) => setUnits(prev => [...prev, { ...u, id: Math.random().toString(36).substr(2, 9) }]);
-  const deleteUnit = (id: string) => setUnits(prev => prev.filter(x => x.id !== id));
+  const addUnit = (u: any) => addDoc(collection(db, 'units'), u);
+  const deleteUnit = (id: string) => deleteDoc(doc(db, 'units', id));
 
   const addItem = (i: any) => {
     const maxCode = items.reduce((max, x) => Math.max(max, parseInt(x.code) || 0), 0);
-    setItems(prev => [...prev, { ...i, id: Math.random().toString(36).substr(2, 9), code: (maxCode + 1).toString() }]);
+    addDoc(collection(db, 'items'), { ...i, code: (maxCode + 1).toString() });
   };
-  const updateItem = (id: string, d: any) => setItems(prev => prev.map(x => x.id === id ? { ...x, ...d } : x));
-  const deleteItem = (id: string) => setItems(prev => prev.filter(x => x.id !== id));
+
+  const updateItem = (id: string, d: any) => setDoc(doc(db, 'items', id), d, { merge: true });
+  const deleteItem = (id: string) => deleteDoc(doc(db, 'items', id));
 
   const addSupplier = (s: any) => {
-    setSuppliers(prev => [...prev, { ...s, id: Math.random().toString(36).substr(2, 9), balance: 0, totalPurchases: 0, totalPayments: 0 }]);
+    addDoc(collection(db, 'suppliers'), { 
+      ...s, 
+      balance: 0, 
+      totalPurchases: 0, 
+      totalPayments: 0 
+    });
   };
-  const updateSupplier = (id: string, d: any) => setSuppliers(prev => prev.map(x => x.id === id ? { ...x, ...d } : x));
-  const deleteSupplier = (id: string) => setSuppliers(prev => prev.filter(x => x.id !== id));
 
-  const addPurchase = (inv: any, updates: any[]) => {
+  const updateSupplier = (id: string, d: any) => setDoc(doc(db, 'suppliers', id), d, { merge: true });
+  const deleteSupplier = (id: string) => deleteDoc(doc(db, 'suppliers', id));
+
+  const addPurchase = async (inv: any, updates: any[]) => {
     const remaining = inv.totalValue - inv.paidAmount;
     const status = remaining <= 0 ? 'PAID' : (inv.paidAmount > 0 ? 'PARTIAL' : 'UNPAID');
-    const newInvoice = { ...inv, id: Math.random().toString(36).substr(2, 9), remainingAmount: remaining, status };
     
-    setPurchases(prev => [newInvoice, ...prev]);
+    const batch = writeBatch(db);
     
-    setItems(prev => prev.map(item => {
-      const update = updates.find(u => u.itemId === item.id);
-      return update ? { ...item, currentStock: item.currentStock + update.qty } : item;
-    }));
+    // Create Purchase Invoice
+    const purchaseRef = doc(collection(db, 'purchases'));
+    batch.set(purchaseRef, { ...inv, remainingAmount: remaining, status });
 
-    setSuppliers(prev => prev.map(sup => {
-      if (sup.id === inv.supplierId) {
-        return {
-          ...sup,
-          balance: sup.balance + remaining,
-          totalPurchases: sup.totalPurchases + inv.totalValue,
-          totalPayments: sup.totalPayments + inv.paidAmount
-        };
-      }
-      return sup;
-    }));
+    // Update Items Stock and Add Movements
+    updates.forEach(u => {
+      const itemRef = doc(db, 'items', u.itemId);
+      batch.update(itemRef, { currentStock: increment(u.qty) });
 
+      const moveRef = doc(collection(db, 'movements'));
+      batch.set(moveRef, {
+        itemId: u.itemId,
+        type: 'IN',
+        quantity: u.qty,
+        priceAtTime: inv.items.find((i: any) => i.itemId === u.itemId)?.price || 0,
+        userId: currentUser?.id || 'system',
+        timestamp: serverTimestamp()
+      });
+    });
+
+    // Update Supplier Balance
+    const supplierRef = doc(db, 'suppliers', inv.supplierId);
+    batch.update(supplierRef, {
+      balance: increment(remaining),
+      totalPurchases: increment(inv.totalValue),
+      totalPayments: increment(inv.paidAmount)
+    });
+
+    // If payment made, record in payments ledger
     if (inv.paidAmount > 0) {
-      setPayments(prev => [{
-        id: Math.random().toString(36).substr(2, 9),
+      const paymentRef = doc(collection(db, 'payments'));
+      batch.set(paymentRef, {
         supplierId: inv.supplierId,
         amount: inv.paidAmount,
         date: inv.date,
         method: 'CASH',
-        note: `دفعة مقدمة للفاتورة #${newInvoice.id}`
-      }, ...prev]);
+        note: `دفعة مقدمة للفاتورة`
+      });
     }
-    toast({ title: 'تم تسجيل المشتريات وتحديث المخزن' });
+
+    await batch.commit();
+    toast({ title: 'تم تسجيل المشتريات وتحديث المخزن سحابياً' });
   };
 
-  const addPayment = (p: any) => {
+  const addPayment = async (p: any) => {
     const supplier = suppliers.find(s => s.id === p.supplierId);
     if (!supplier) return;
     if (p.amount > supplier.balance) {
       return toast({ title: 'خطأ: مبلغ السداد أكبر من الدين المتبقي', variant: 'destructive' });
     }
 
-    const newPayment = { ...p, id: Math.random().toString(36).substr(2, 9), date: new Date().toISOString() };
-    setPayments(prev => [newPayment, ...prev]);
+    const batch = writeBatch(db);
+    const paymentRef = doc(collection(db, 'payments'));
+    batch.set(paymentRef, { ...p, date: new Date().toISOString() });
 
-    setSuppliers(prev => prev.map(sup => {
-      if (sup.id === p.supplierId) {
-        return {
-          ...sup,
-          balance: sup.balance - p.amount,
-          totalPayments: sup.totalPayments + p.amount
-        };
-      }
-      return sup;
-    }));
+    const supplierRef = doc(db, 'suppliers', p.supplierId);
+    batch.update(supplierRef, {
+      balance: increment(-p.amount),
+      totalPayments: increment(p.amount)
+    });
+
+    await batch.commit();
     toast({ title: 'تم تسجيل السداد بنجاح' });
   };
 
-  const addExpense = (e: any) => setExpenses(prev => [...prev, { ...e, id: Math.random().toString(36).substr(2, 9), timestamp: new Date().toISOString(), userId: currentUser?.id || '1' }]);
-  const deleteExpense = (id: string) => setExpenses(prev => prev.filter(x => x.id !== id));
+  const addExpense = (e: any) => {
+    addDoc(collection(db, 'expenses'), { 
+      ...e, 
+      timestamp: new Date().toISOString(), 
+      userId: currentUser?.id || 'system' 
+    });
+  };
+  const deleteExpense = (id: string) => deleteDoc(doc(db, 'expenses', id));
+
+  const deleteMovement = (id: string) => deleteDoc(doc(db, 'movements', id));
 
   if (!isLoaded) return null;
 
   return (
     <WarehouseContext.Provider value={{
-      currentUser, users, departments, units, items, suppliers, purchases, payments, expenses,
+      currentUser, users, departments, units, items, suppliers, purchases, payments, expenses, movements,
       login, emergencyLogin, logout, addUser, deleteUser, updateUserPassword,
       addDepartment, deleteDepartment, addUnit, deleteUnit,
       addItem, updateItem, deleteItem, addSupplier, updateSupplier, deleteSupplier,
-      addPurchase, addPayment, addExpense, deleteExpense, canEdit, isAdmin
+      addPurchase, addPayment, addExpense, deleteExpense, deleteMovement, canEdit, isAdmin
     }}>
       {children}
     </WarehouseContext.Provider>

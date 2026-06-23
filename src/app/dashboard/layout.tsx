@@ -4,12 +4,14 @@
 import { useWarehouse } from '@/app/lib/store';
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { DashboardSidebar } from '@/components/layout/dashboard-sidebar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Cloud, CloudCheck } from 'lucide-react';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { currentUser } = useWarehouse();
   const router = useRouter();
+  const [isSyncing, setIsSyncing] = useState(false);
 
   useEffect(() => {
     if (!currentUser) {
@@ -30,6 +32,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <p className="text-[10px] text-emerald-600 font-bold">تم التطوير بواسطة: Abdallah Elshemey | 01102346158</p>
             </div>
             <div className="flex items-center gap-4">
+              <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full border border-emerald-100">
+                <CloudCheck className="h-4 w-4" />
+                <span className="text-[10px] font-black">حفظ سحابي تلقائي</span>
+              </div>
               <span className="text-xs bg-accent/20 text-accent font-black px-3 py-1 rounded-full uppercase italic">محدث الاصدار دائما</span>
             </div>
           </header>
