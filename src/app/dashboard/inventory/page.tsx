@@ -1,13 +1,13 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWarehouse } from '@/app/lib/store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Search, Filter, Edit2, Trash2, Package, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { Plus, Search, Filter, Edit2, Trash2, Package, ArrowDownLeft, ArrowUpRight, Sparkles } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -35,7 +35,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 
 export default function InventoryPage() {
-  const { items, categories, addItem, updateItem, deleteItem, addMovement, debtAccounts, canEdit, isAdmin, departments } = useWarehouse();
+  const { items, categories, departments, addItem, updateItem, deleteItem, addMovement, debtAccounts, canEdit, isAdmin } = useWarehouse();
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -44,6 +44,23 @@ export default function InventoryPage() {
   const [activeItem, setActiveItem] = useState<any>(null);
   const [movementType, setMovementType] = useState<'IN' | 'OUT'>('IN');
 
+  // Dialog States for New Item
+  const [dialogDeptId, setDialogDeptId] = useState<string>('');
+  const [dialogCatId, setDialogCatId] = useState<string>('');
+  const [dialogItemName, setDialogItemName] = useState<string>('');
+  const [dialogItemCode, setDialogItemCode] = useState<string>('');
+
+  useEffect(() => {
+    if (isDialogOpen && !editingItem && dialogItemName && dialogCatId) {
+      const dept = departments.find(d => d.id === dialogDeptId);
+      const cat = categories.find(c => c.id === dialogCatId);
+      const prefix = (dept?.name?.substring(0, 2) || 'X').toUpperCase();
+      const catPrefix = (cat?.name?.substring(0, 2) || 'Y').toUpperCase();
+      const random = Math.floor(1000 + Math.random() * 9000);
+      setDialogItemCode(`${prefix}${catPrefix}-${random}`);
+    }
+  }, [dialogItemName, dialogCatId, isDialogOpen, editingItem, dialogDeptId, departments, categories]);
+
   const filteredItems = items.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           item.code.toLowerCase().includes(searchTerm.toLowerCase());
@@ -51,18 +68,28 @@ export default function InventoryPage() {
     return matchesSearch && matchesCategory;
   });
 
+  const resetDialog = () => {
+    setEditingItem(null);
+    setDialogDeptId('');
+    setDialogCatId('');
+    setDialogItemName('');
+    setDialogItemCode('');
+  };
+
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const itemData = {
-      name: formData.get('name') as string,
-      code: formData.get('code') as string,
-      categoryId: formData.get('categoryId') as string,
+      name: dialogItemName,
+      code: dialogItemCode,
+      categoryId: dialogCatId,
       unit: formData.get('unit') as string,
       purchasePrice: parseFloat(formData.get('purchasePrice') as string),
       salePrice: parseFloat(formData.get('salePrice') as string),
       currentStock: parseInt(formData.get('currentStock') as string || '0'),
     };
+
+    if (!itemData.categoryId) return toast({ title: 'يرجى اختيار القسم والتصنيف', variant: 'destructive' });
 
     if (editingItem) {
       updateItem(editingItem.id, itemData);
@@ -71,7 +98,7 @@ export default function InventoryPage() {
     }
     
     setIsDialogOpen(false);
-    setEditingItem(null);
+    resetDialog();
   };
 
   const handleMovementSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -106,47 +133,85 @@ export default function InventoryPage() {
         {canEdit() && (
           <Dialog open={isDialogOpen} onOpenChange={(val) => {
             setIsDialogOpen(val);
-            if (!val) setEditingItem(null);
+            if (!val) resetDialog();
+            if (val && editingItem) {
+              setDialogItemName(editingItem.name);
+              setDialogItemCode(editingItem.code);
+              setDialogCatId(editingItem.categoryId);
+              const cat = categories.find(c => c.id === editingItem.categoryId);
+              if (cat) setDialogDeptId(cat.departmentId);
+            }
           }}>
             <DialogTrigger asChild>
               <Button className="bg-[#336699] hover:bg-[#2a5580] font-bold">
                 <Plus className="h-4 w-4 ml-2" /> إضافة مادة جديدة
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[500px]" dir="rtl">
+            <DialogContent className="sm:max-w-[550px]" dir="rtl">
               <DialogHeader>
                 <DialogTitle className="text-right">{editingItem ? 'تعديل بيانات المادة' : 'إنشاء صنف جديد'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4 py-4 text-right">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="code">كود المادة</Label>
-                    <Input id="code" name="code" defaultValue={editingItem?.code} required placeholder="مثال: SKU-001" className="text-right" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="name">اسم المادة</Label>
-                    <Input id="name" name="name" defaultValue={editingItem?.name} required placeholder="اسم المادة بالكامل" className="text-right" />
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="categoryId">التصنيف</Label>
-                    <Select name="categoryId" defaultValue={editingItem?.categoryId || categories[0]?.id}>
+                    <Label>القسم</Label>
+                    <Select value={dialogDeptId} onValueChange={setDialogDeptId}>
                       <SelectTrigger className="text-right">
-                        <SelectValue placeholder="اختر التصنيف" />
+                        <SelectValue placeholder="اختر القسم" />
                       </SelectTrigger>
-                      <SelectContent>
-                        {categories.map(c => (
-                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      <SelectContent dir="rtl">
+                        {departments.map(d => (
+                          <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="unit">وحدة القياس</Label>
-                    <Input id="unit" name="unit" defaultValue={editingItem?.unit} required placeholder="مثال: قطعة، كجم، متر" className="text-right" />
+                    <Label>التصنيف</Label>
+                    <Select value={dialogCatId} onValueChange={setDialogCatId} disabled={!dialogDeptId}>
+                      <SelectTrigger className="text-right">
+                        <SelectValue placeholder="اختر التصنيف" />
+                      </SelectTrigger>
+                      <SelectContent dir="rtl">
+                        {categories.filter(c => c.departmentId === dialogDeptId).map(c => (
+                          <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="name">اسم المادة</Label>
+                  <Input 
+                    id="name" 
+                    value={dialogItemName} 
+                    onChange={(e) => setDialogItemName(e.target.value)} 
+                    required 
+                    placeholder="اسم المادة بالكامل" 
+                    className="text-right" 
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="code" className="flex items-center gap-1 justify-end text-blue-600">
+                      كود المادة (تلقائي) <Sparkles className="h-3 w-3" />
+                    </Label>
+                    <Input 
+                      id="code" 
+                      value={dialogItemCode} 
+                      onChange={(e) => setDialogItemCode(e.target.value)} 
+                      required 
+                      className="text-right font-mono bg-slate-50" 
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="unit">وحدة القياس</Label>
+                    <Input id="unit" name="unit" defaultValue={editingItem?.unit} required placeholder="مثال: قطعة، كجم" className="text-right" />
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="purchasePrice">سعر الشراء</Label>
