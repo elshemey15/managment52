@@ -11,8 +11,7 @@ let db: Firestore;
 let auth: Auth;
 
 /**
- * Initializes Firebase services if not already initialized.
- * Returns the app, firestore, and auth instances.
+ * Initializes Firebase services.
  */
 export function initializeFirebase() {
   if (!getApps().length) {

@@ -83,7 +83,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
 
-  // Real-time synchronization for all collections
   useEffect(() => {
     const unsubscribers = [
       onSnapshot(collection(db, 'users'), (s) => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() } as User)))),
@@ -97,7 +96,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       onSnapshot(query(collection(db, 'movements'), orderBy('timestamp', 'desc')), (s) => setMovements(s.docs.map(d => ({ id: d.id, ...d.data() } as Movement))))
     ];
 
-    // Load currentUser from local session only for persistence of login
     const savedUser = localStorage.getItem('ae_current_user');
     if (savedUser) setCurrentUser(JSON.parse(savedUser));
     
@@ -135,24 +133,15 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const isAdmin = () => currentUser?.role === 'Admin';
   const canEdit = () => currentUser?.role === 'Admin' || currentUser?.role === 'Editor';
 
-  const addUser = (u: any) => {
-    addDoc(collection(db, 'users'), u);
-    toast({ title: 'تم إنشاء المستخدم بنجاح' });
-  };
-  
+  const addUser = (u: any) => addDoc(collection(db, 'users'), u);
   const deleteUser = (id: string) => {
     if (id === currentUser?.id) return toast({ title: 'لا يمكنك حذف حسابك الحالي', variant: 'destructive' });
     deleteDoc(doc(db, 'users', id));
   };
-  
-  const updateUserPassword = (id: string, newPass: string) => {
-    setDoc(doc(db, 'users', id), { password: newPass }, { merge: true });
-    toast({ title: 'تم تحديث كلمة المرور بنجاح' });
-  };
+  const updateUserPassword = (id: string, newPass: string) => setDoc(doc(db, 'users', id), { password: newPass }, { merge: true });
 
   const addDepartment = (d: any) => addDoc(collection(db, 'departments'), d);
   const deleteDepartment = (id: string) => deleteDoc(doc(db, 'departments', id));
-
   const addUnit = (u: any) => addDoc(collection(db, 'units'), u);
   const deleteUnit = (id: string) => deleteDoc(doc(db, 'units', id));
 
@@ -160,37 +149,24 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const maxCode = items.reduce((max, x) => Math.max(max, parseInt(x.code) || 0), 0);
     addDoc(collection(db, 'items'), { ...i, code: (maxCode + 1).toString() });
   };
-
   const updateItem = (id: string, d: any) => setDoc(doc(db, 'items', id), d, { merge: true });
   const deleteItem = (id: string) => deleteDoc(doc(db, 'items', id));
 
-  const addSupplier = (s: any) => {
-    addDoc(collection(db, 'suppliers'), { 
-      ...s, 
-      balance: 0, 
-      totalPurchases: 0, 
-      totalPayments: 0 
-    });
-  };
-
+  const addSupplier = (s: any) => addDoc(collection(db, 'suppliers'), { ...s, balance: 0, totalPurchases: 0, totalPayments: 0 });
   const updateSupplier = (id: string, d: any) => setDoc(doc(db, 'suppliers', id), d, { merge: true });
   const deleteSupplier = (id: string) => deleteDoc(doc(db, 'suppliers', id));
 
   const addPurchase = async (inv: any, updates: any[]) => {
     const remaining = inv.totalValue - inv.paidAmount;
     const status = remaining <= 0 ? 'PAID' : (inv.paidAmount > 0 ? 'PARTIAL' : 'UNPAID');
-    
     const batch = writeBatch(db);
     
-    // Create Purchase Invoice
     const purchaseRef = doc(collection(db, 'purchases'));
     batch.set(purchaseRef, { ...inv, remainingAmount: remaining, status });
 
-    // Update Items Stock and Add Movements
     updates.forEach(u => {
       const itemRef = doc(db, 'items', u.itemId);
       batch.update(itemRef, { currentStock: increment(u.qty) });
-
       const moveRef = doc(collection(db, 'movements'));
       batch.set(moveRef, {
         itemId: u.itemId,
@@ -202,7 +178,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
     });
 
-    // Update Supplier Balance
     const supplierRef = doc(db, 'suppliers', inv.supplierId);
     batch.update(supplierRef, {
       balance: increment(remaining),
@@ -210,7 +185,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       totalPayments: increment(inv.paidAmount)
     });
 
-    // If payment made, record in payments ledger
     if (inv.paidAmount > 0) {
       const paymentRef = doc(collection(db, 'payments'));
       batch.set(paymentRef, {
@@ -223,39 +197,23 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     }
 
     await batch.commit();
-    toast({ title: 'تم تسجيل المشتريات وتحديث المخزن سحابياً' });
+    toast({ title: 'تم الحفظ والمزامنة السحابية بنجاح' });
   };
 
   const addPayment = async (p: any) => {
     const supplier = suppliers.find(s => s.id === p.supplierId);
     if (!supplier) return;
-    if (p.amount > supplier.balance) {
-      return toast({ title: 'خطأ: مبلغ السداد أكبر من الدين المتبقي', variant: 'destructive' });
-    }
-
     const batch = writeBatch(db);
     const paymentRef = doc(collection(db, 'payments'));
     batch.set(paymentRef, { ...p, date: new Date().toISOString() });
-
     const supplierRef = doc(db, 'suppliers', p.supplierId);
-    batch.update(supplierRef, {
-      balance: increment(-p.amount),
-      totalPayments: increment(p.amount)
-    });
-
+    batch.update(supplierRef, { balance: increment(-p.amount), totalPayments: increment(p.amount) });
     await batch.commit();
-    toast({ title: 'تم تسجيل السداد بنجاح' });
+    toast({ title: 'تم تسجيل السداد ومزامنته' });
   };
 
-  const addExpense = (e: any) => {
-    addDoc(collection(db, 'expenses'), { 
-      ...e, 
-      timestamp: new Date().toISOString(), 
-      userId: currentUser?.id || 'system' 
-    });
-  };
+  const addExpense = (e: any) => addDoc(collection(db, 'expenses'), { ...e, timestamp: new Date().toISOString(), userId: currentUser?.id || 'system' });
   const deleteExpense = (id: string) => deleteDoc(doc(db, 'expenses', id));
-
   const deleteMovement = (id: string) => deleteDoc(doc(db, 'movements', id));
 
   if (!isLoaded) return null;
