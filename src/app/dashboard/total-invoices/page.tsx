@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWarehouse } from '@/app/lib/store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -19,9 +19,14 @@ import {
 
 export default function TotalInvoicesPage() {
   const { generalInvoices, addGeneralInvoice, deleteGeneralInvoice, canEdit, isAdmin } = useWarehouse();
+  const [currentDate, setCurrentDate] = useState('');
   
   const daysOfWeek = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
   
+  useEffect(() => {
+    setCurrentDate(new Date().toISOString().split('T')[0]);
+  }, []);
+
   const handleAdd = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -79,7 +84,7 @@ export default function TotalInvoicesPage() {
             <form onSubmit={handleAdd} className="space-y-4 text-right">
               <div className="space-y-2">
                 <Label>التاريخ</Label>
-                <Input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="text-right" />
+                <Input name="date" type="date" required defaultValue={currentDate} className="text-right" />
               </div>
               <div className="space-y-2">
                 <Label>عدد الفواتير (كتابة يدوية)</Label>

@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useWarehouse } from '@/app/lib/store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,11 @@ import { Badge } from '@/components/ui/badge';
 export default function CashTransactionsPage() {
   const { cashTransactions, addCashTransaction, deleteCashTransaction, canEdit, isAdmin } = useWarehouse();
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentDate, setCurrentDate] = useState('');
+
+  useEffect(() => {
+    setCurrentDate(new Date().toISOString().split('T')[0]);
+  }, []);
 
   const handleAdd = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -63,7 +68,6 @@ export default function CashTransactionsPage() {
     );
   }, [cashTransactions, searchTerm]);
 
-  // حسابات الشخص المحدد في البحث
   const personStats = useMemo(() => {
     if (!searchTerm) return null;
     const sent = filteredTransactions.filter(t => t.type === 'SEND').reduce((acc, t) => acc + t.amount, 0);
@@ -93,7 +97,6 @@ export default function CashTransactionsPage() {
         </div>
       </div>
 
-      {/* قسم تلخيص البحث عن شخص */}
       {searchTerm && personStats && (
         <Card className="border-none shadow-md bg-[#336699] text-white overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
           <CardContent className="p-6">
@@ -175,7 +178,7 @@ export default function CashTransactionsPage() {
 
               <div className="space-y-2">
                 <Label>التاريخ</Label>
-                <Input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]} className="text-right" />
+                <Input name="date" type="date" required defaultValue={currentDate} className="text-right" />
               </div>
 
               <div className="space-y-2">

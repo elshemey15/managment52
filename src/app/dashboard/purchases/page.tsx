@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWarehouse } from '@/app/lib/store';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,10 +27,15 @@ import {
 export default function PurchasesPage() {
   const { suppliers, items, addPurchase, canEdit } = useWarehouse();
   const [selectedSupplierId, setSelectedSupplierId] = useState('');
-  const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
+  const [invoiceDate, setInvoiceDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [invoiceItems, setInvoiceItems] = useState<{itemId: string, qty: number, price: number}[]>([]);
   const [paidAmount, setPaidAmount] = useState(0);
+
+  // إعداد التاريخ في العميل فقط لتجنب خطأ Hydration
+  useEffect(() => {
+    setInvoiceDate(new Date().toISOString().split('T')[0]);
+  }, []);
 
   const addItemToInvoice = () => {
     setInvoiceItems([...invoiceItems, { itemId: '', qty: 1, price: 0 }]);
@@ -68,14 +73,12 @@ export default function PurchasesPage() {
       supplierId: selectedSupplierId,
       supplierName: supplier?.name || '',
       date: new Date(invoiceDate).toISOString(),
-      // إذا كان التاريخ فارغاً نستخدم تاريخ الفاتورة نفسه كافتراضي
       dueDate: dueDate ? new Date(dueDate).toISOString() : new Date(invoiceDate).toISOString(),
       totalValue,
       paidAmount,
       items: invoiceItems
     }, invoiceItems.map(i => ({ itemId: i.itemId, qty: i.qty })));
 
-    // Reset
     setSelectedSupplierId('');
     setInvoiceItems([]);
     setPaidAmount(0);
