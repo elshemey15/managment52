@@ -98,6 +98,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>([]);
 
   useEffect(() => {
+    // ربط كافة المجموعات بالسحابة للمزامنة الدائمة
     const unsubscribers = [
       onSnapshot(collection(db, 'users'), (s) => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() } as User)))),
       onSnapshot(collection(db, 'departments'), (s) => setDepartments(s.docs.map(d => ({ id: d.id, ...d.data() } as Department)))),
