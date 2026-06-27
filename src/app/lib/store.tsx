@@ -67,7 +67,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  // تحميل البيانات من الـ LocalStorage لتجنب المسح عند الريفريش
   const getLocalData = (key: string, fallback: any) => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem(key);
@@ -88,7 +87,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [generalInvoices, setGeneralInvoices] = useState<GeneralInvoice[]>(() => getLocalData('wh_general_invoices', []));
   const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>(() => getLocalData('wh_cash_transactions', []));
 
-  // حفظ تلقائي في الـ LocalStorage أول ما أي قيمة تتغير
   useEffect(() => { if (isLoaded) localStorage.setItem('wh_users', JSON.stringify(users)); }, [users, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('wh_departments', JSON.stringify(departments)); }, [departments, isLoaded]);
   useEffect(() => { if (isLoaded) localStorage.setItem('wh_units', JSON.stringify(units)); }, [units, isLoaded]);
@@ -140,22 +138,13 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const makeId = () => Math.random().toString(36).substr(2, 9);
 
-  // الدوال معدلة بالكامل لتشتغل محلياً بدون إيرور السيرفر
-  const addUser = async (u: any) => {
-    setUsers(prev => [...prev, { id: makeId(), ...u }]);
-    toast({ title: 'تم إضافة المستخدم بنجاح وثباته' });
-  };
-
+  const addUser = async (u: any) => { setUsers(prev => [...prev, { id: makeId(), ...u }]); toast({ title: 'تم إضافة المستخدم بنجاح وثباته' }); };
   const deleteUser = async (id: string) => {
     if (id === currentUser?.id) return toast({ title: 'لا يمكنك حذف حسابك الحالي', variant: 'destructive' });
     setUsers(prev => prev.filter(x => x.id !== id));
     toast({ title: 'تم حذف المستخدم' });
   };
-
-  const updateUserPassword = async (id: string, newPass: string) => {
-    setUsers(prev => prev.map(x => x.id === id ? { ...x, password: newPass } : x));
-    toast({ title: 'تم تحديث كلمة المرور' });
-  };
+  const updateUserPassword = async (id: string, newPass: string) => { setUsers(prev => prev.map(x => x.id === id ? { ...x, password: newPass } : x)); toast({ title: 'تم تحديث كلمة المرور' }); };
 
   const addDepartment = async (d: any) => { setDepartments(prev => [...prev, { id: makeId(), ...d }]); toast({ title: 'تم إضافة القسم' }); };
   const deleteDepartment = async (id: string) => { setDepartments(prev => prev.filter(x => x.id !== id)); toast({ title: 'تم حذف القسم' }); };
@@ -167,7 +156,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const maxCode = items.reduce((max, x) => Math.max(max, parseInt(x.code) || 0), 0);
     const newCode = (maxCode + 1).toString();
     const newItemId = makeId();
-    
     const currentStock = Number(i.currentStock || 0);
     const purchasePrice = Number(i.purchasePrice || 0);
     const salePrice = Number(i.salePrice || 0);
@@ -175,9 +163,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setItems(prev => [...prev, { id: newItemId, code: newCode, name: i.name, currentStock, purchasePrice, salePrice, unitId: i.unitId, departmentId: i.departmentId, barcode: i.barcode }]);
 
     if (currentStock > 0) {
-      setMovements(prev => [{
-        id: makeId(), itemId: newItemId, type: 'IN', quantity: currentStock, priceAtTime: purchasePrice, timestamp: new Date(), note: 'كمية افتتاحية عند إنشاء الصنف', userId: currentUser?.id || 'system'
-      }, ...prev]);
+      setMovements(prev => [{ id: makeId(), itemId: newItemId, type: 'IN', quantity: currentStock, priceAtTime: purchasePrice, timestamp: new Date(), note: 'كمية افتتاحية عند إنشاء الصنف', userId: currentUser?.id || 'system' }, ...prev]);
     }
     toast({ title: 'تم حفظ الصنف بنجاح وثباته' });
   };
@@ -186,7 +172,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     setItems(prev => prev.map(x => x.id === id ? { ...x, name: d.name, purchasePrice: Number(d.purchasePrice || 0), salePrice: Number(d.salePrice || 0), barcode: d.barcode, unitId: d.unitId, departmentId: d.departmentId } : x));
     toast({ title: 'تم تعديل الصنف' });
   };
-
   const deleteItem = async (id: string) => { setItems(prev => prev.filter(x => x.id !== id)); toast({ title: 'تم حذف الصنف' }); };
 
   const addSupplier = async (s: any) => { setSuppliers(prev => [...prev, { id: makeId(), balance: 0, totalPurchases: 0, totalPayments: 0, ...s }]); toast({ title: 'تم إضافة المورد' }); };
@@ -201,7 +186,6 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const invId = makeId();
 
     setPurchases(prev => [{ id: invId, remainingAmount: remaining, status, date: new Date(), ...inv }, ...prev]);
-
     setItems(prev => prev.map(item => {
       const up = updates.find(u => u.itemId === item.id);
       return up ? { ...item, currentStock: item.currentStock + Number(up.qty) } : item;
@@ -209,9 +193,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
     updates.forEach(u => {
       const itemPrice = Number(inv.items.find((i: any) => i.itemId === u.itemId)?.price || 0);
-      setMovements(prev => [{
-        id: makeId(), itemId: u.itemId, type: 'IN', quantity: Number(u.qty), priceAtTime: itemPrice, timestamp: new Date(), note: `توريد فاتورة من المورد: ${inv.supplierName}`, userId: currentUser?.id || 'system'
-      }, ...prev]);
+      setMovements(prev => [{ id: makeId(), itemId: u.itemId, type: 'IN', quantity: Number(u.qty), priceAtTime: itemPrice, timestamp: new Date(), note: `توريد فاتورة من المورد: ${inv.supplierName}`, userId: currentUser?.id || 'system' }, ...prev]);
     });
 
     setSuppliers(prev => prev.map(s => s.id === inv.supplierId ? { ...s, balance: s.balance + remaining, totalPurchases: s.totalPurchases + totalVal, totalPayments: s.totalPayments + paid } : s));
@@ -228,9 +210,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     const price = type === 'IN' ? (item?.purchasePrice || 0) : (item?.salePrice || 0);
 
     setItems(prev => prev.map(i => i.id === itemId ? { ...i, currentStock: i.currentStock + (type === 'IN' ? numQty : -numQty) } : i));
-    setMovements(prev => [{
-      id: makeId(), itemId, type, quantity: numQty, priceAtTime: price, timestamp: new Date(), note: note || (type === 'IN' ? 'توريد يدوي' : 'صرف يدوي'), userId: currentUser?.id || 'system'
-    }, ...prev]);
+    setMovements(prev => [{ id: makeId(), itemId, type, quantity: numQty, priceAtTime: price, timestamp: new Date(), note: note || (type === 'IN' ? 'توريد يدوي' : 'صرف يدوي'), userId: currentUser?.id || 'system' }, ...prev]);
     toast({ title: 'تم حركات المخزن بنجاح' });
   };
 
@@ -249,12 +229,10 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
 
   const addCashTransaction = async (trans: any) => { setCashTransactions(prev => [{ id: makeId(), timestamp: new Date(), userId: currentUser?.id || 'system', ...trans }, ...prev]); toast({ title: 'تم تسجيل المعاملة' }); };
   const deleteCashTransaction = async (id: string) => { setCashTransactions(prev => prev.filter(x => x.id !== id)); };
-
   const deleteMovement = async (id: string) => { setMovements(prev => prev.filter(x => x.id !== id)); };
 
   const exportAllData = (format: 'json' | 'excel' | 'pdf') => {
     try {
-      const timestampStr = new Date().toLocaleString('ar-EG');
       if (format === 'excel') {
         const wb = XLSX.utils.book_new();
         const summaryData = [{ 'إجمالي قيمة المخزن': items.reduce((acc, i) => acc + (i.currentStock * i.purchasePrice), 0), 'عدد الأصناف': items.length }];
