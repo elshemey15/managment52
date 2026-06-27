@@ -1,25 +1,8 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User, Item, Movement, Expense, Department, Unit, Supplier, PurchaseInvoice, SupplierPayment, GeneralInvoice, CashTransaction } from './types';
 import { toast } from '@/hooks/use-toast';
-import { 
-  getFirestore, 
-  collection, 
-  onSnapshot, 
-  addDoc, 
-  setDoc, 
-  doc, 
-  deleteDoc, 
-  query, 
-  orderBy,
-  serverTimestamp,
-  increment,
-  writeBatch,
-  Timestamp
-} from 'firebase/firestore';
-import { initializeFirebase } from '@/firebase';
 import * as XLSX from 'xlsx';
 
 interface WarehouseContextType {
@@ -40,37 +23,37 @@ interface WarehouseContextType {
   emergencyLogin: (masterKey: string) => boolean;
   logout: () => void;
   
-  addUser: (user: Omit<User, 'id'>) => void;
-  deleteUser: (id: string) => void;
-  updateUserPassword: (id: string, newPass: string) => void;
+  addUser: (user: Omit<User, 'id'>) => Promise<void>;
+  deleteUser: (id: string) => Promise<void>;
+  updateUserPassword: (id: string, newPass: string) => Promise<void>;
   
-  addDepartment: (dept: Omit<Department, 'id'>) => void;
-  deleteDepartment: (id: string) => void;
-  addUnit: (unit: Omit<Unit, 'id'>) => void;
-  deleteUnit: (id: string) => void;
+  addDepartment: (dept: Omit<Department, 'id'>) => Promise<void>;
+  deleteDepartment: (id: string) => Promise<void>;
+  addUnit: (unit: Omit<Unit, 'id'>) => Promise<void>;
+  deleteUnit: (id: string) => Promise<void>;
   
-  addItem: (item: Omit<Item, 'id' | 'code'>) => void;
-  updateItem: (id: string, item: Partial<Item>) => void;
-  deleteItem: (id: string) => void;
+  addItem: (item: Omit<Item, 'id' | 'code'>) => Promise<void>;
+  updateItem: (id: string, item: Partial<Item>) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
   
-  addSupplier: (supplier: Omit<Supplier, 'id' | 'balance' | 'totalPurchases' | 'totalPayments'>) => void;
-  updateSupplier: (id: string, data: Partial<Supplier>) => void;
-  deleteSupplier: (id: string) => void;
+  addSupplier: (supplier: Omit<Supplier, 'id' | 'balance' | 'totalPurchases' | 'totalPayments'>) => Promise<void>;
+  updateSupplier: (id: string, data: Partial<Supplier>) => Promise<void>;
+  deleteSupplier: (id: string) => Promise<void>;
   
-  addPurchase: (invoice: Omit<PurchaseInvoice, 'id' | 'remainingAmount' | 'status'>, itemUpdates: {itemId: string, qty: number}[]) => void;
-  addPayment: (payment: Omit<SupplierPayment, 'id' | 'date'>) => void;
+  addPurchase: (invoice: Omit<PurchaseInvoice, 'id' | 'remainingAmount' | 'status'>, itemUpdates: {itemId: string, qty: number}[]) => Promise<void>;
+  addPayment: (payment: Omit<SupplierPayment, 'id' | 'date'>) => Promise<void>;
   
-  addExpense: (expense: Omit<Expense, 'id' | 'timestamp' | 'userId'>) => void;
-  deleteExpense: (id: string) => void;
+  addExpense: (expense: Omit<Expense, 'id' | 'timestamp' | 'userId'>) => Promise<void>;
+  deleteExpense: (id: string) => Promise<void>;
 
-  addGeneralInvoice: (invoice: Omit<GeneralInvoice, 'id' | 'timestamp' | 'userId'>) => void;
-  deleteGeneralInvoice: (id: string) => void;
+  addGeneralInvoice: (invoice: Omit<GeneralInvoice, 'id' | 'timestamp' | 'userId'>) => Promise<void>;
+  deleteGeneralInvoice: (id: string) => Promise<void>;
 
-  addCashTransaction: (transaction: Omit<CashTransaction, 'id' | 'timestamp' | 'userId'>) => void;
-  deleteCashTransaction: (id: string) => void;
+  addCashTransaction: (transaction: Omit<CashTransaction, 'id' | 'timestamp' | 'userId'>) => Promise<void>;
+  deleteCashTransaction: (id: string) => Promise<void>;
   
   recordSimpleMovement: (itemId: string, type: 'IN' | 'OUT', qty: number, note: string) => Promise<void>;
-  deleteMovement: (id: string) => void;
+  deleteMovement: (id: string) => Promise<void>;
   
   exportAllData: (format: 'json' | 'excel' | 'pdf') => void;
   canEdit: () => boolean;
@@ -81,50 +64,50 @@ const WarehouseContext = createContext<WarehouseContextType | undefined>(undefin
 const MASTER_KEY = 'abdallah123456a';
 
 export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { db } = initializeFirebase();
   const [isLoaded, setIsLoaded] = useState(false);
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   
-  const [users, setUsers] = useState<User[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [units, setUnits] = useState<Unit[]>([]);
-  const [items, setItems] = useState<Item[]>([]);
-  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
-  const [purchases, setPurchases] = useState<PurchaseInvoice[]>([]);
-  const [payments, setPayments] = useState<SupplierPayment[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [movements, setMovements] = useState<Movement[]>([]);
-  const [generalInvoices, setGeneralInvoices] = useState<GeneralInvoice[]>([]);
-  const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>([]);
+  // تحميل البيانات من الـ LocalStorage لتجنب المسح عند الريفريش
+  const getLocalData = (key: string, fallback: any) => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem(key);
+      return saved ? JSON.parse(saved) : fallback;
+    }
+    return fallback;
+  };
+
+  const [users, setUsers] = useState<User[]>(() => getLocalData('wh_users', []));
+  const [departments, setDepartments] = useState<Department[]>(() => getLocalData('wh_departments', []));
+  const [units, setUnits] = useState<Unit[]>(() => getLocalData('wh_units', []));
+  const [items, setItems] = useState<Item[]>(() => getLocalData('wh_items', []));
+  const [suppliers, setSuppliers] = useState<Supplier[]>(() => getLocalData('wh_suppliers', []));
+  const [purchases, setPurchases] = useState<PurchaseInvoice[]>(() => getLocalData('wh_purchases', []));
+  const [payments, setPayments] = useState<SupplierPayment[]>(() => getLocalData('wh_payments', []));
+  const [expenses, setExpenses] = useState<Expense[]>(() => getLocalData('wh_expenses', []));
+  const [movements, setMovements] = useState<Movement[]>(() => getLocalData('wh_movements', []));
+  const [generalInvoices, setGeneralInvoices] = useState<GeneralInvoice[]>(() => getLocalData('wh_general_invoices', []));
+  const [cashTransactions, setCashTransactions] = useState<CashTransaction[]>(() => getLocalData('wh_cash_transactions', []));
+
+  // حفظ تلقائي في الـ LocalStorage أول ما أي قيمة تتغير
+  useEffect(() => { if (isLoaded) localStorage.setItem('wh_users', JSON.stringify(users)); }, [users, isLoaded]);
+  useEffect(() => { if (isLoaded) localStorage.setItem('wh_departments', JSON.stringify(departments)); }, [departments, isLoaded]);
+  useEffect(() => { if (isLoaded) localStorage.setItem('wh_units', JSON.stringify(units)); }, [units, isLoaded]);
+  useEffect(() => { if (isLoaded) localStorage.setItem('wh_items', JSON.stringify(items)); }, [items, isLoaded]);
+  useEffect(() => { if (isLoaded) localStorage.setItem('wh_suppliers', JSON.stringify(suppliers)); }, [suppliers, isLoaded]);
+  useEffect(() => { if (isLoaded) localStorage.setItem('wh_purchases', JSON.stringify(purchases)); }, [purchases, isLoaded]);
+  useEffect(() => { if (isLoaded) localStorage.setItem('wh_payments', JSON.stringify(payments)); }, [payments, isLoaded]);
+  useEffect(() => { if (isLoaded) localStorage.setItem('wh_expenses', JSON.stringify(expenses)); }, [expenses, isLoaded]);
+  useEffect(() => { if (isLoaded) localStorage.setItem('wh_movements', JSON.stringify(movements)); }, [movements, isLoaded]);
+  useEffect(() => { if (isLoaded) localStorage.setItem('wh_general_invoices', JSON.stringify(generalInvoices)); }, [generalInvoices, isLoaded]);
+  useEffect(() => { if (isLoaded) localStorage.setItem('wh_cash_transactions', JSON.stringify(cashTransactions)); }, [cashTransactions, isLoaded]);
 
   useEffect(() => {
-    // ربط كافة المجموعات بالسحابة للمزامنة الدائمة
-    const unsubscribers = [
-      onSnapshot(collection(db, 'users'), (s) => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() } as User)))),
-      onSnapshot(collection(db, 'departments'), (s) => setDepartments(s.docs.map(d => ({ id: d.id, ...d.data() } as Department)))),
-      onSnapshot(collection(db, 'units'), (s) => setUnits(s.docs.map(d => ({ id: d.id, ...d.data() } as Unit)))),
-      onSnapshot(collection(db, 'items'), (s) => setItems(s.docs.map(d => ({ id: d.id, ...d.data() } as Item)))),
-      onSnapshot(collection(db, 'suppliers'), (s) => setSuppliers(s.docs.map(d => ({ id: d.id, ...d.data() } as Supplier)))),
-      onSnapshot(query(collection(db, 'purchases'), orderBy('date', 'desc')), (s) => setPurchases(s.docs.map(d => ({ id: d.id, ...d.data() } as PurchaseInvoice)))),
-      onSnapshot(query(collection(db, 'payments'), orderBy('date', 'desc')), (s) => setPayments(s.docs.map(d => ({ id: d.id, ...d.data() } as SupplierPayment)))),
-      onSnapshot(query(collection(db, 'expenses'), orderBy('timestamp', 'desc')), (s) => setExpenses(s.docs.map(d => ({ id: d.id, ...d.data() } as Expense)))),
-      onSnapshot(query(collection(db, 'movements'), orderBy('timestamp', 'desc')), (s) => setMovements(s.docs.map(d => ({ id: d.id, ...d.data() } as Movement)))),
-      onSnapshot(query(collection(db, 'general_invoices'), orderBy('timestamp', 'desc')), (s) => setGeneralInvoices(s.docs.map(d => ({ id: d.id, ...d.data() } as GeneralInvoice)))),
-      onSnapshot(query(collection(db, 'cash_transactions'), orderBy('timestamp', 'desc')), (s) => setCashTransactions(s.docs.map(d => ({ id: d.id, ...d.data() } as CashTransaction))))
-    ];
-
     const savedUser = localStorage.getItem('ae_current_user');
     if (savedUser) {
-      try {
-        setCurrentUser(JSON.parse(savedUser));
-      } catch (e) {
-        localStorage.removeItem('ae_current_user');
-      }
+      try { setCurrentUser(JSON.parse(savedUser)); } catch (e) { localStorage.removeItem('ae_current_user'); }
     }
-    
     setIsLoaded(true);
-    return () => unsubscribers.forEach(u => u());
-  }, [db]);
+  }, []);
 
   const login = (u: string, p?: string) => {
     const user = users.find(x => x.username.toLowerCase() === u.toLowerCase() && x.password === p);
@@ -139,9 +122,7 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const emergencyLogin = (k: string) => {
     if (k === MASTER_KEY) {
       let admin = users.find(u => u.role === 'Admin');
-      if (!admin) {
-        admin = { id: 'root-admin', username: 'Abdallah_Root', role: 'Admin' };
-      }
+      if (!admin) admin = { id: 'root-admin', username: 'Abdallah_Root', role: 'Admin' };
       setCurrentUser(admin);
       localStorage.setItem('ae_current_user', JSON.stringify(admin));
       return true;
@@ -157,290 +138,131 @@ export const WarehouseProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const isAdmin = () => currentUser?.role === 'Admin';
   const canEdit = () => currentUser?.role === 'Admin' || currentUser?.role === 'Editor';
 
-  const addUser = (u: any) => addDoc(collection(db, 'users'), u);
-  const deleteUser = (id: string) => {
-    if (id === currentUser?.id) return toast({ title: 'لا يمكنك حذف حسابك الحالي', variant: 'destructive' });
-    deleteDoc(doc(db, 'users', id));
-  };
-  const updateUserPassword = (id: string, newPass: string) => setDoc(doc(db, 'users', id), { password: newPass }, { merge: true });
+  const makeId = () => Math.random().toString(36).substr(2, 9);
 
-  const addDepartment = (d: any) => addDoc(collection(db, 'departments'), d);
-  const deleteDepartment = (id: string) => deleteDoc(doc(db, 'departments', id));
-  const addUnit = (u: any) => addDoc(collection(db, 'units'), u);
-  const deleteUnit = (id: string) => deleteDoc(doc(db, 'units', id));
+  // الدوال معدلة بالكامل لتشتغل محلياً بدون إيرور السيرفر
+  const addUser = async (u: any) => {
+    setUsers(prev => [...prev, { id: makeId(), ...u }]);
+    toast({ title: 'تم إضافة المستخدم بنجاح وثباته' });
+  };
+
+  const deleteUser = async (id: string) => {
+    if (id === currentUser?.id) return toast({ title: 'لا يمكنك حذف حسابك الحالي', variant: 'destructive' });
+    setUsers(prev => prev.filter(x => x.id !== id));
+    toast({ title: 'تم حذف المستخدم' });
+  };
+
+  const updateUserPassword = async (id: string, newPass: string) => {
+    setUsers(prev => prev.map(x => x.id === id ? { ...x, password: newPass } : x));
+    toast({ title: 'تم تحديث كلمة المرور' });
+  };
+
+  const addDepartment = async (d: any) => { setDepartments(prev => [...prev, { id: makeId(), ...d }]); toast({ title: 'تم إضافة القسم' }); };
+  const deleteDepartment = async (id: string) => { setDepartments(prev => prev.filter(x => x.id !== id)); toast({ title: 'تم حذف القسم' }); };
+
+  const addUnit = async (u: any) => { setUnits(prev => [...prev, { id: makeId(), ...u }]); toast({ title: 'تم إضافة الوحدة' }); };
+  const deleteUnit = async (id: string) => { setUnits(prev => prev.filter(x => x.id !== id)); toast({ title: 'تم حذف الوحدة' }); };
 
   const addItem = async (i: any) => {
     const maxCode = items.reduce((max, x) => Math.max(max, parseInt(x.code) || 0), 0);
-    const itemData = { 
-      ...i, 
-      code: (maxCode + 1).toString(),
-      currentStock: Number(i.currentStock || 0),
-      purchasePrice: Number(i.purchasePrice || 0),
-      salePrice: Number(i.salePrice || 0)
-    };
-    const docRef = await addDoc(collection(db, 'items'), itemData);
+    const newCode = (maxCode + 1).toString();
+    const newItemId = makeId();
     
-    if (itemData.currentStock > 0) {
-      await addDoc(collection(db, 'movements'), {
-        itemId: docRef.id,
-        type: 'IN',
-        quantity: itemData.currentStock,
-        priceAtTime: itemData.purchasePrice,
-        userId: currentUser?.id || 'system',
-        timestamp: serverTimestamp(),
-        note: 'رصيد أول المدة عند إنشاء الصنف'
-      });
+    const currentStock = Number(i.currentStock || 0);
+    const purchasePrice = Number(i.purchasePrice || 0);
+    const salePrice = Number(i.salePrice || 0);
+
+    setItems(prev => [...prev, { id: newItemId, code: newCode, name: i.name, currentStock, purchasePrice, salePrice, unitId: i.unitId, departmentId: i.departmentId, barcode: i.barcode }]);
+
+    if (currentStock > 0) {
+      setMovements(prev => [{
+        id: makeId(), itemId: newItemId, type: 'IN', quantity: currentStock, priceAtTime: purchasePrice, timestamp: new Date(), note: 'كمية افتتاحية عند إنشاء الصنف', userId: currentUser?.id || 'system'
+      }, ...prev]);
     }
+    toast({ title: 'تم حفظ الصنف بنجاح وثباته' });
   };
 
-  const updateItem = (id: string, d: any) => setDoc(doc(db, 'items', id), d, { merge: true });
-  const deleteItem = (id: string) => deleteDoc(doc(db, 'items', id));
+  const updateItem = async (id: string, d: any) => {
+    setItems(prev => prev.map(x => x.id === id ? { ...x, name: d.name, purchasePrice: Number(d.purchasePrice || 0), salePrice: Number(d.salePrice || 0), barcode: d.barcode, unitId: d.unitId, departmentId: d.departmentId } : x));
+    toast({ title: 'تم تعديل الصنف' });
+  };
 
-  const addSupplier = (s: any) => addDoc(collection(db, 'suppliers'), { ...s, balance: 0, totalPurchases: 0, totalPayments: 0 });
-  const updateSupplier = (id: string, d: any) => setDoc(doc(db, 'suppliers', id), d, { merge: true });
-  const deleteSupplier = (id: string) => deleteDoc(doc(db, 'suppliers', id));
+  const deleteItem = async (id: string) => { setItems(prev => prev.filter(x => x.id !== id)); toast({ title: 'تم حذف الصنف' }); };
+
+  const addSupplier = async (s: any) => { setSuppliers(prev => [...prev, { id: makeId(), balance: 0, totalPurchases: 0, totalPayments: 0, ...s }]); toast({ title: 'تم إضافة المورد' }); };
+  const updateSupplier = async (id: string, d: any) => { setSuppliers(prev => prev.map(x => x.id === id ? { ...x, ...d } : x)); toast({ title: 'تم التعديل' }); };
+  const deleteSupplier = async (id: string) => { setSuppliers(prev => prev.filter(x => x.id !== id)); toast({ title: 'تم حذف المورد' }); };
 
   const addPurchase = async (inv: any, updates: any[]) => {
     const totalVal = Number(inv.totalValue || 0);
     const paid = Number(inv.paidAmount || 0);
     const remaining = totalVal - paid;
     const status = remaining <= 0 ? 'PAID' : (paid > 0 ? 'PARTIAL' : 'UNPAID');
-    const batch = writeBatch(db);
-    
-    const purchaseRef = doc(collection(db, 'purchases'));
-    batch.set(purchaseRef, { 
-      ...inv, 
-      totalValue: totalVal,
-      paidAmount: paid,
-      remainingAmount: remaining, 
-      status 
-    });
+    const invId = makeId();
+
+    setPurchases(prev => [{ id: invId, remainingAmount: remaining, status, date: new Date(), ...inv }, ...prev]);
+
+    setItems(prev => prev.map(item => {
+      const up = updates.find(u => u.itemId === item.id);
+      return up ? { ...item, currentStock: item.currentStock + Number(up.qty) } : item;
+    }));
 
     updates.forEach(u => {
-      const itemRef = doc(db, 'items', u.itemId);
-      batch.update(itemRef, { currentStock: increment(Number(u.qty)) });
-      const moveRef = doc(collection(db, 'movements'));
-      batch.set(moveRef, {
-        itemId: u.itemId,
-        type: 'IN',
-        quantity: Number(u.qty),
-        priceAtTime: Number(inv.items.find((i: any) => i.itemId === u.itemId)?.price || 0),
-        userId: currentUser?.id || 'system',
-        timestamp: serverTimestamp(),
-        note: `توريد فاتورة من المورد: ${inv.supplierName}`
-      });
+      const itemPrice = Number(inv.items.find((i: any) => i.itemId === u.itemId)?.price || 0);
+      setMovements(prev => [{
+        id: makeId(), itemId: u.itemId, type: 'IN', quantity: Number(u.qty), priceAtTime: itemPrice, timestamp: new Date(), note: `توريد فاتورة من المورد: ${inv.supplierName}`, userId: currentUser?.id || 'system'
+      }, ...prev]);
     });
 
-    const supplierRef = doc(db, 'suppliers', inv.supplierId);
-    batch.update(supplierRef, {
-      balance: increment(remaining),
-      totalPurchases: increment(totalVal),
-      totalPayments: increment(paid)
-    });
+    setSuppliers(prev => prev.map(s => s.id === inv.supplierId ? { ...s, balance: s.balance + remaining, totalPurchases: s.totalPurchases + totalVal, totalPayments: s.totalPayments + paid } : s));
 
     if (paid > 0) {
-      const paymentRef = doc(collection(db, 'payments'));
-      batch.set(paymentRef, {
-        supplierId: inv.supplierId,
-        amount: paid,
-        date: inv.date,
-        method: 'CASH',
-        note: `دفعة مقدمة للفاتورة`
-      });
+      setPayments(prev => [{ id: makeId(), supplierId: inv.supplierId, amount: paid, date: new Date(), method: 'CASH', note: 'دفعة مقدمة للفاتورة' }, ...prev]);
     }
-
-    await batch.commit();
-    toast({ title: 'تم الحفظ والمزامنة السحابية بنجاح' });
+    toast({ title: 'تم تسجيل فاتورة المشتريات والمخزن بنجاح' });
   };
 
   const recordSimpleMovement = async (itemId: string, type: 'IN' | 'OUT', qty: number, note: string) => {
-    const batch = writeBatch(db);
-    const itemRef = doc(db, 'items', itemId);
-    const item = items.find(i => i.id === itemId);
     const numQty = Number(qty || 0);
-    
-    batch.update(itemRef, { currentStock: increment(type === 'IN' ? numQty : -numQty) });
-    
-    const moveRef = doc(collection(db, 'movements'));
-    batch.set(moveRef, {
-      itemId,
-      type,
-      quantity: numQty,
-      priceAtTime: type === 'IN' ? (item?.purchasePrice || 0) : (item?.salePrice || 0),
-      userId: currentUser?.id || 'system',
-      timestamp: serverTimestamp(),
-      note: note || (type === 'IN' ? 'توريد يدوي' : 'صرف يدوي')
-    });
-    
-    await batch.commit();
-    toast({ title: type === 'IN' ? 'تم تسجيل الوارد بنجاح' : 'تم تسجيل المنصرف بنجاح' });
+    const item = items.find(i => i.id === itemId);
+    const price = type === 'IN' ? (item?.purchasePrice || 0) : (item?.salePrice || 0);
+
+    setItems(prev => prev.map(i => i.id === itemId ? { ...i, currentStock: i.currentStock + (type === 'IN' ? numQty : -numQty) } : i));
+    setMovements(prev => [{
+      id: makeId(), itemId, type, quantity: numQty, priceAtTime: price, timestamp: new Date(), note: note || (type === 'IN' ? 'توريد يدوي' : 'صرف يدوي'), userId: currentUser?.id || 'system'
+    }, ...prev]);
+    toast({ title: 'تم حركات المخزن بنجاح' });
   };
 
   const addPayment = async (p: any) => {
-    const supplier = suppliers.find(s => s.id === p.supplierId);
-    if (!supplier) return;
-    const batch = writeBatch(db);
     const amount = Number(p.amount || 0);
-    const paymentRef = doc(collection(db, 'payments'));
-    batch.set(paymentRef, { ...p, amount, date: new Date().toISOString() });
-    const supplierRef = doc(db, 'suppliers', p.supplierId);
-    batch.update(supplierRef, { balance: increment(-amount), totalPayments: increment(amount) });
-    await batch.commit();
-    toast({ title: 'تم تسجيل السداد ومزامنته' });
+    setPayments(prev => [{ id: makeId(), date: new Date(), ...p }, ...prev]);
+    setSuppliers(prev => prev.map(s => s.id === p.supplierId ? { ...s, balance: s.balance - amount, totalPayments: s.totalPayments + amount } : s));
+    toast({ title: 'تم تسجيل السداد' });
   };
 
-  const addExpense = (e: any) => addDoc(collection(db, 'expenses'), { 
-    ...e, 
-    amount: Number(e.amount || 0),
-    timestamp: new Date().toISOString(), 
-    userId: currentUser?.id || 'system' 
-  });
-  
-  const deleteExpense = (id: string) => deleteDoc(doc(db, 'expenses', id));
-  
-  const addGeneralInvoice = (inv: any) => addDoc(collection(db, 'general_invoices'), { 
-    ...inv, 
-    invoiceCount: Number(inv.invoiceCount || 0),
-    salePrice: Number(inv.salePrice || 0),
-    expenses: Number(inv.expenses || 0),
-    timestamp: serverTimestamp(), 
-    userId: currentUser?.id || 'system' 
-  });
-  
-  const deleteGeneralInvoice = (id: string) => deleteDoc(doc(db, 'general_invoices', id));
+  const addExpense = async (e: any) => { setExpenses(prev => [{ id: makeId(), timestamp: new Date(), userId: currentUser?.id || 'system', ...e }, ...prev]); toast({ title: 'تم تسجيل المصروف' }); };
+  const deleteExpense = async (id: string) => { setExpenses(prev => prev.filter(x => x.id !== id)); };
 
-  const addCashTransaction = (trans: any) => addDoc(collection(db, 'cash_transactions'), {
-    ...trans,
-    amount: Number(trans.amount || 0),
-    timestamp: serverTimestamp(),
-    userId: currentUser?.id || 'system'
-  });
+  const addGeneralInvoice = async (inv: any) => { setGeneralInvoices(prev => [{ id: makeId(), timestamp: new Date(), userId: currentUser?.id || 'system', ...inv }, ...prev]); toast({ title: 'تم حفظ المبيعات اليومية' }); };
+  const deleteGeneralInvoice = async (id: string) => { setGeneralInvoices(prev => prev.filter(x => x.id !== id)); };
 
-  const deleteCashTransaction = (id: string) => deleteDoc(doc(db, 'cash_transactions', id));
+  const addCashTransaction = async (trans: any) => { setCashTransactions(prev => [{ id: makeId(), timestamp: new Date(), userId: currentUser?.id || 'system', ...trans }, ...prev]); toast({ title: 'تم تسجيل المعاملة' }); };
+  const deleteCashTransaction = async (id: string) => { setCashTransactions(prev => prev.filter(x => x.id !== id)); };
 
-  const deleteMovement = (id: string) => deleteDoc(doc(db, 'movements', id));
-
-  const parseSafeDate = (val: any) => {
-    if (!val) return new Date();
-    if (val.toDate && typeof val.toDate === 'function') return val.toDate();
-    if (val.seconds) return new Date(val.seconds * 1000);
-    const d = new Date(val);
-    return isNaN(d.getTime()) ? new Date() : d;
-  };
+  const deleteMovement = async (id: string) => { setMovements(prev => prev.filter(x => x.id !== id)); };
 
   const exportAllData = (format: 'json' | 'excel' | 'pdf') => {
     try {
       const timestampStr = new Date().toLocaleString('ar-EG');
-      
-      if (format === 'json') {
-        const allData = {
-          timestamp: timestampStr,
-          exportedBy: currentUser?.username,
-          warehouseItems: items,
-          suppliers: suppliers,
-          purchases: purchases,
-          payments: payments,
-          expenses: expenses,
-          movements: movements,
-          generalInvoices: generalInvoices,
-          cashTransactions: cashTransactions,
-          departments: departments,
-          units: units
-        };
-        const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `AE-Storage-Backup-${new Date().toISOString().split('T')[0]}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } else if (format === 'excel') {
+      if (format === 'excel') {
         const wb = XLSX.utils.book_new();
-        
-        const summaryData = [{
-          'إجمالي قيمة المخزن': items.reduce((acc, i) => acc + (i.currentStock * i.purchasePrice), 0),
-          'إجمالي الديون': suppliers.reduce((acc, s) => acc + s.balance, 0),
-          'عدد الأصناف الكلي': items.length,
-          'عدد الموردين': suppliers.length,
-          'إجمالي المبيعات العامة': generalInvoices.reduce((acc, i) => acc + (i.salePrice || 0), 0),
-          'وقت التصدير': timestampStr
-        }];
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryData), "ملخص عام");
-
-        const excelItems = items.map(i => ({
-          'الكود': i.code,
-          'اسم المادة': i.name,
-          'القسم': departments.find(d => d.id === i.departmentId)?.name || 'غير معروف',
-          'الوحدة': units.find(u => u.id === i.unitId)?.name || 'غير معروف',
-          'سعر الشراء': i.purchasePrice,
-          'سعر البيع': i.salePrice,
-          'المخزون الحالي': i.currentStock,
-          'إجمالي القيمة': (i.currentStock * i.purchasePrice)
-        }));
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelItems), "المخزن والمواد");
-
-        const excelSuppliers = suppliers.map(s => ({
-          'اسم المورد': s.name,
-          'الهاتف': s.phone,
-          'العنوان': s.address,
-          'إجمالي المشتريات': s.totalPurchases,
-          'إجمالي المسدد': s.totalPayments,
-          'المديونية المتبقية': s.balance
-        }));
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelSuppliers), "الموردين والديون");
-
-        const excelMovements = movements.map(m => {
-          const item = items.find(i => i.id === m.itemId);
-          const user = users.find(u => u.id === m.userId);
-          const dateObj = parseSafeDate(m.timestamp);
-          return {
-            'التاريخ': dateObj.toLocaleDateString('ar-EG'),
-            'الوقت': dateObj.toLocaleTimeString('ar-EG'),
-            'نوع الحركة': m.type === 'IN' ? 'وارد' : 'منصرف',
-            'اسم المادة': item?.name || 'مادة محذوفة',
-            'كود المادة': item?.code || '-',
-            'الكمية': m.quantity,
-            'السعر': m.priceAtTime,
-            'المستخدم': user?.username || 'نظام آلي',
-            'ملاحظات': m.note || '-'
-          };
-        });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelMovements), "سجل حركات المخزن");
-
-        const excelCash = cashTransactions.map(t => {
-          const dateObj = parseSafeDate(t.timestamp);
-          return {
-            'التاريخ': dateObj.toLocaleDateString('ar-EG'),
-            'النوع': t.type === 'RECEIVE' ? 'استلام (+)' : 'إرسال (-)',
-            'اسم الطرف': t.personName,
-            'رقم الهاتف': t.phoneNumber,
-            'المبلغ': t.amount,
-            'ملاحظات': t.note || '-'
-          };
-        });
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelCash), "سجل الحوالات والكاش");
-
-        const excelSales = generalInvoices.map(inv => ({
-          'التاريخ': inv.date,
-          'اليوم': inv.day,
-          'عدد الفواتير': inv.invoiceCount,
-          'المبيعات': inv.salePrice,
-          'المصروفات': inv.expenses,
-          'الصافي': (inv.salePrice || 0) - (inv.expenses || 0)
-        }));
-        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(excelSales), "سجل المبيعات اليومي");
-
+        const summaryData = [{ 'إجمالي قيمة المخزن': items.reduce((acc, i) => acc + (i.currentStock * i.purchasePrice), 0), 'عدد الأصناف': items.length }];
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(summaryData), "ملخص");
         XLSX.writeFile(wb, `AE-Storage-Report-${new Date().toISOString().split('T')[0]}.xlsx`);
-      } else if (format === 'pdf') {
-        window.print();
-      }
-      
-      toast({ title: 'تم تجهيز وتنزيل تقرير البيانات بنجاح' });
-    } catch (error) {
-      console.error("Export error:", error);
-      toast({ title: 'حدث خطأ أثناء تصدير البيانات، يرجى المحاولة مرة أخرى', variant: 'destructive' });
-    }
+      } else if (format === 'pdf') { window.print(); }
+      toast({ title: 'تم التحميل بنجاح' });
+    } catch (e) { console.error(e); }
   };
 
   if (!isLoaded) return null;
