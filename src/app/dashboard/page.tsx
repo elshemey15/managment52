@@ -2,7 +2,9 @@
 "use client";
 
 import React, { useMemo } from 'react';
-import { useWarehouse } from '@/app/lib/store';
+import { useEffect, useState } from 'react';
+import { db } from '@/firebase/config'; // تأكد أن المسار يشير لملف الـ config الذي عدلناه
+import { collection, onSnapshot } from 'firebase/firestore';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { 
   Package, 
@@ -23,7 +25,21 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function DashboardOverview() {
-  const { items, suppliers, purchases, movements } = useWarehouse();
+  // تعريف الـ state للبيانات
+  const [items, setItems] = useState<any[]>([]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [purchases, setPurchases] = useState<any[]>([]);
+  const [movements, setMovements] = useState<any[]>([]);
+
+  // الـ useEffect لجلب البيانات (اللي إنت كاتبه صح، بس تأكد من إغلاق القوس)
+  useEffect(() => {
+    const unsubItems = onSnapshot(collection(db, "items"), (snap) => setItems(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubSuppliers = onSnapshot(collection(db, "suppliers"), (snap) => setSuppliers(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubPurchases = onSnapshot(collection(db, "purchases"), (snap) => setPurchases(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubMovements = onSnapshot(collection(db, "movements"), (snap) => setMovements(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    
+    return () => { unsubItems(); unsubSuppliers(); unsubPurchases(); unsubMovements(); };
+  }, []);
 
   // الحسابات المالية
   const inventoryValue = useMemo(() => items.reduce((acc, i) => acc + (i.currentStock * (i.purchasePrice || 0)), 0), [items]);
