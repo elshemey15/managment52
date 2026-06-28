@@ -1,14 +1,23 @@
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { getFirestore } from "firebase/firestore";
 
-/**
- * Firebase configuration object.
- * هذا الملف هو حلقة الوصل بين موقعك وقواعد بيانات جوجل.
- * البيانات الآن تُحفظ في سحابة Firebase Firestore بشكل دائم.
- */
-export const firebaseConfig = {
-  apiKey: "AIzaSyB-Placeholder-Key", // سيتم استبداله تلقائياً عند النشر الفعلي
-  authDomain: "ae-storage-ecosystem.firebaseapp.com",
-  projectId: "ae-storage-ecosystem",
-  storageBucket: "ae-storage-ecosystem.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyBoabEOr-ZOkQ6NLcbpNPjsNHMVzcJuhuA",
+  authDomain: "managment52.firebaseapp.com",
+  projectId: "managment52",
+  storageBucket: "managment52.firebasestorage.app",
+  messagingSenderId: "444816435749",
+  appId: "1:444816435749:web:d5a4a29d952a76a6d1edcc",
+  measurementId: "G-PRW67PJSX1"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+// Initialize Firestore (هذا الجزء هو اللي هيحفظ البيانات)
+export const db = getFirestore(app);
+
+export default app;
