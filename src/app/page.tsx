@@ -33,14 +33,23 @@ export default function LoginPage() {
     }
   }, [currentUser, router]);
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (login(username, password)) {
-      router.push('/dashboard');
-    } else {
-      setError('اسم المستخدم أو كلمة المرور غير صحيحة.');
-    }
-  };
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+  e.preventDefault(); // هذا السطر يمنع الصفحة من عمل ريفريش تلقائي
+  console.log("تم الضغط على تسجيل الدخول");
+
+  try {
+    // هنا سنضع منطق تسجيل الدخول الفعلي لاحقاً
+    // مؤقتاً، سنقوم بطباعة البيانات للتأكد من أنها تصل
+    console.log("بيانات الدخول:", { username });
+    
+    // إذا كنت تريد تجربة الانتقال للصفحة:
+    // router.push('/dashboard');
+    
+  } catch (error) {
+    console.error("خطأ في تسجيل الدخول:", error);
+    alert("حدث خطأ أثناء تسجيل الدخول");
+  }
+};
 
   const handleEmergencyAccess = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
