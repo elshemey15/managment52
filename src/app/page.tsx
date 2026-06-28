@@ -33,15 +33,14 @@ export default function LoginPage() {
     }
   }, [currentUser, router]);
 
-  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
+ const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
   e.preventDefault();
-  const auth = getAuth(); // استدعاء الـ auth مباشرة
   try {
-    await signInWithEmailAndPassword(auth, username, password);
+    // استخدمنا await مباشرة بدون getAuth أو تعقيدات
+    await login(username, password); 
     router.push('/dashboard');
   } catch (err) {
-    console.error("خطأ تسجيل الدخول:", err);
-    setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+    setError('خطأ في تسجيل الدخول');
   }
 };
 
