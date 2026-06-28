@@ -1,11 +1,20 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc, onSnapshot } from 'firebase/firestore';
 
-const supabaseUrl = 'https://yycivlcldmmyamouaygh.supabase.co';
-const supabaseKey = 'sb_publishable_ThqP61Twa915_LYrezvgaA__DvQs_T7c8rU5t6v7w8x9y0z1A2B3C4D5E6F7G8H9I0J1K2L3M4N5O6P7Q8R9S0T1U2V3W4X5Y6Z7A8B9C0D';
+const firebaseConfig = {
+  apiKey: "AIzaSyBoabEOr-ZOkQ6NLcbpNPjsNHMVzcJuhuA",
+  authDomain: "managment52.firebaseapp.com",
+  projectId: "managment52",
+  storageBucket: "managment52.appspot.com",
+  messagingSenderId: "444816435749",
+  appId: "1:444816435749:web:d5a4a29d952a76a6d1edcc",
+  measurementId: "G-PRW67PJSX1"
+};
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 const WarehouseContext = createContext<any>(null);
 
@@ -13,16 +22,20 @@ export const WarehouseProvider = ({ children }: any) => {
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
-    async function loadData() {
-      const { data: users } = await supabase.from('users').select('*');
-      if (users) setData(users);
-    }
-    loadData();
+    // بيسحب الداتا من قاعدة البيانات أول ما الصفحة تفتح
+    const unsubscribe = onSnapshot(collection(db, "items"), (snapshot) => {
+      setData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+    return () => unsubscribe();
   }, []);
 
-  const addItem = async (item: { name: string, info: string }) => {
-    const { data: insertedData } = await supabase.from('users').insert([item]).select();
-    if (insertedData) setData((prev) => [...prev, ...insertedData]);
+  const addItem = async (item: any) => {
+    // بيحفظ الداتا في قاعدة البيانات
+    try {
+      await addDoc(collection(db, "items"), item);
+    } catch (e) {
+      console.error("Error adding document: ", e);
+    }
   };
 
   return (
