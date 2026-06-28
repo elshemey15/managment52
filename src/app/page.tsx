@@ -1,4 +1,4 @@
-
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -34,20 +34,14 @@ export default function LoginPage() {
   }, [currentUser, router]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
-  e.preventDefault(); // هذا السطر يمنع الصفحة من عمل ريفريش تلقائي
-  console.log("تم الضغط على تسجيل الدخول");
-
+  e.preventDefault();
+  const auth = getAuth(); // استدعاء الـ auth مباشرة
   try {
-    // هنا سنضع منطق تسجيل الدخول الفعلي لاحقاً
-    // مؤقتاً، سنقوم بطباعة البيانات للتأكد من أنها تصل
-    console.log("بيانات الدخول:", { username });
-    
-    // إذا كنت تريد تجربة الانتقال للصفحة:
-    // router.push('/dashboard');
-    
-  } catch (error) {
-    console.error("خطأ في تسجيل الدخول:", error);
-    alert("حدث خطأ أثناء تسجيل الدخول");
+    await signInWithEmailAndPassword(auth, username, password);
+    router.push('/dashboard');
+  } catch (err) {
+    console.error("خطأ تسجيل الدخول:", err);
+    setError('اسم المستخدم أو كلمة المرور غير صحيحة');
   }
 };
 
