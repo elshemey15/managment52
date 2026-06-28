@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useState, useEffect } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, onSnapshot } from 'firebase/firestore';
+import { initializeApp, getApps } from "firebase/app";
+import { getFirestore, collection, addDoc, onSnapshot } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBoabEOr-ZOkQ6NLcbpNPjsNHMVzcJuhuA",
@@ -13,8 +13,9 @@ const firebaseConfig = {
   measurementId: "G-PRW67PJSX1"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// تهيئة فايربيس بطريقة آمنة
+const app = !getApps().length ? initializeApp(firebaseConfig) : getApps()[0];
+export const db = getFirestore(app);
 
 const WarehouseContext = createContext<any>(null);
 
@@ -22,7 +23,7 @@ export const WarehouseProvider = ({ children }: any) => {
   const [data, setData] = useState<any[]>([]);
 
   useEffect(() => {
-    // بيسحب الداتا من قاعدة البيانات أول ما الصفحة تفتح
+    // الاتصال بقاعدة البيانات وسحب البيانات لحظياً
     const unsubscribe = onSnapshot(collection(db, "items"), (snapshot) => {
       setData(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
@@ -30,7 +31,6 @@ export const WarehouseProvider = ({ children }: any) => {
   }, []);
 
   const addItem = async (item: any) => {
-    // بيحفظ الداتا في قاعدة البيانات
     try {
       await addDoc(collection(db, "items"), item);
     } catch (e) {
@@ -44,4 +44,5 @@ export const WarehouseProvider = ({ children }: any) => {
     </WarehouseContext.Provider>
   );
 };
+
 export const useWarehouse = () => useContext(WarehouseContext);
